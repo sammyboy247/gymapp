@@ -91,6 +91,7 @@ jules remote list --task
 echo "Task completed"  # ❌ Will crash Gemini CLI
 Write-Output "Done"    # ❌ Will crash Gemini CLI
 $result = "value"      # ❌ Will crash Gemini CLI
+Test-Path "file.txt"   # ❌ Will crash Gemini CLI
 ```
 
 **Correct Pattern:**
@@ -98,6 +99,7 @@ $result = "value"      # ❌ Will crash Gemini CLI
 echo "Task completed"; Start-Sleep -Seconds 2  # ✅ Safe
 Write-Output "Done"; Start-Sleep -Seconds 1    # ✅ Safe
 $result = "value"; Start-Sleep -Seconds 1      # ✅ Safe
+Test-Path "file.txt"; Start-Sleep -Seconds 1   # ✅ Safe
 ```
 
 **Why:** The Gemini CLI expects commands to have measurable execution time. Instant commands complete before the CLI can properly register them, causing application crashes.
@@ -108,8 +110,12 @@ $result = "value"; Start-Sleep -Seconds 1      # ✅ Safe
 
 ### CONSTRAINT-005: Update Task Files Immediately
 
+**RULE:** After adopting any action, immediately update the task file with:
+- New status (Initiated)
+- Timestamp
+
 **RULE:** After completing any action, immediately update the task file with:
-- New status
+- New status (Completed)
 - Session IDs (for Jules tasks)
 - Timestamp
 - Result summary
