@@ -1,38 +1,63 @@
-// PoC Types based on gym_app_project_spec.md
+import { Timestamp } from 'firebase/firestore';
+
+// User types
+export type UserRole = 'member' | 'coach' | 'admin';
 
 export interface UserProfile {
-  uid: string;
-  email: string | null;
-  realName: string;
-  friendId: string; // The public-facing, non-personal ID (e.g., FitnessFan72)
-  role: 'member' | 'admin' | 'coach';
-  assignedProgramIds?: string[];
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  friendId: string;
+  shareActivity: boolean;
+  friends: string[];
+  friendRequestsSent: string[];
+  friendRequestsReceived: string[];
 }
 
-export interface GymSession {
+// Schedule types
+export interface Schedule {
   id: string;
-  title: string;
-  type: string; // e.g., "Spin", "Yoga", "HIIT"
-  startTime: number; // Firestore Timestamp (as number)
-  endTime: number; // Firestore Timestamp (as number)
-  roomId: string;
+  name: string;
+  description: string;
+  startTime: Timestamp;
+  endTime: Timestamp;
+  maxCapacity: number;
+  bookedUserIds: string[];
   coachId: string;
+  programName: string;
 }
 
 export interface Booking {
   id: string;
   userId: string;
-  sessionId: string;
-  sessionTitle: string;
-  startTime: number;
-  // Program selection from PoC spec
-  selectedProgramId: string; // 'generic' or a specific program ID
+  scheduleId: string;
+  bookedAt: Timestamp;
+  programAssignedId: string;
 }
 
+export interface ProgramAssignment {
+  id: string;
+  userId: string;
+  programId: string;
+  assignedBy: string;
+  assignedAt: Timestamp;
+}
+
+// Social types
+export interface FriendRequest {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  requestedAt: Timestamp;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
+// Admin types
 export interface Program {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  // A simple list of exercise descriptions for the PoC
-  exercises: Array<{ name: string; details: string }>;
+  creatorId: string;
+  createdAt: Timestamp;
 }

@@ -1,105 +1,114 @@
-# Gym Management App
+# GymApp - Proof of Concept
 
-This is a full-stack gym management application built with the following technologies:
+## 1. Project Overview
 
-- **Frontend:** React with TypeScript, Vite
-- **Backend:** Node.js with Express and TypeScript
-- **Database:** PostgreSQL with Prisma ORM
+GymApp is a Proof of Concept (PoC) for a comprehensive gym membership application with a strong social media component. This PoC focuses on validating the technical feasibility of core booking and scheduling workflows, testing user experience for members and admins, and demonstrating privacy-first social features. It serves as a functional model for early user feedback.
 
-## Features
+## 2. Tech Stack
 
-- User authentication and authorization
-- Member management
-- Class scheduling and booking
-- Trainer management
-- Equipment inventory tracking
-- Payment/billing structure
-- Admin dashboard
+-   **Frontend:** React 19, TypeScript, Vite
+-   **Styling:** Tailwind CSS
+-   **State Management:** Zustand
+-   **Routing:** React Router DOM
+-   **Authentication & Database:** Firebase (Authentication, Firestore)
+-   **Icons:** Lucide React
+-   **Build Tool:** Vite
+-   **Code Quality:** ESLint, Prettier (recommended)
 
-## Getting Started
+## 3. Prerequisites
 
-### Prerequisites
+-   Node.js (LTS version, e.g., 18.x or 20.x)
+-   npm or pnpm (recommended)
+-   Firebase Project: A Google Firebase project with Firestore and Authentication enabled.
 
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [pnpm](https://pnpm.io/)
-- [Docker](https://www.docker.com/)
+## 4. Installation
 
-### Installation
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd gymApp
+    ```
+2.  **Install dependencies:**
+    ```bash
+    pnpm install
+    # or npm install
+    ```
+3.  **Set up Environment Variables:** Create a `.env` file in the project root based on `.env.example` (if provided, otherwise see section 5).
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   ```
-2. Install the dependencies:
-   ```bash
-   pnpm install
-   ```
+## 5. Environment Variables
 
-### Running the Application
+Create a `.env` file in the project root with your Firebase configuration:
 
-#### Development
+```env
+VITE_FIREBASE_API_KEY="YOUR_API_KEY"
+VITE_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
+VITE_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
+VITE_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET"
+VITE_FIREBASE_MESSAGING_SENDER_ID="YOUR_MESSAGING_SENDER_ID"
+VITE_FIREBASE_APP_ID="YOUR_APP_ID"
+VITE_FIREBASE_MEASUREMENT_ID="YOUR_MEASUREMENT_ID"
+```
 
-1. Start the PostgreSQL database:
-   ```bash
-   docker-compose up -d
-   ```
-2. Apply the database migrations:
-   ```bash
-   cd packages/backend
-   pnpm prisma migrate dev
-   ```
-3. Start the backend server:
-   ```bash
-   cd packages/backend
-   pnpm dev
-   ```
-4. Start the frontend development server:
-   ```bash
-   cd packages/frontend
-   pnpm dev
-   ```
+Additionally, for the Canvas environment, the following global variables are expected:
 
-## Project Structure
+-   `__app_id`: Unique identifier for the application instance.
+-   `__initial_auth_token`: Custom authentication token for initial sign-in.
 
-The project is a monorepo managed with `pnpm` workspaces.
+## 6. Development
 
-- `packages/frontend`: The React frontend application.
-- `packages/backend`: The Node.js backend application.
+To run the application locally:
 
-## Technologies Used
+1.  **Start the development server:**
+    ```bash
+    pnpm run dev
+    # or npm run dev
+    ```
+2.  Open your browser to `http://localhost:5173` (or the address provided by Vite).
 
-- **Frontend:**
-  - React
-  - TypeScript
-  - Vite
-  - ESLint
-  - Prettier
-  - Jest
-- **Backend:**
-  - Node.js
-  - Express
-  - TypeScript
-  - Prisma
-  - ESLint
-  - Prettier
-  - Jest
-- **Database:**
-  - PostgreSQL
+**Note for Canvas Environment:** If running within a Canvas environment, the `__app_id` and `__initial_auth_token` global variables will be provided. For local development outside Canvas, the application will attempt anonymous sign-in if no custom token is available.
 
-## Linting and Formatting
+## 7. Architecture
 
-- To lint the code, run:
-  ```bash
-  pnpm lint
-  ```
-- To format the code, run:
-  ```bash
-  pnpm format
-  ```
+The project follows a feature-driven architecture, organizing code by domain features rather than by type. Key directories include:
 
-## Testing
+-   `src/components`: Reusable UI components.
+-   `src/features`: Contains domain-specific features (e.g., `auth`, `schedule`, `social`, `admin`), each with its own components, hooks, and logic.
+-   `src/hooks`: Custom React hooks.
+-   `src/lib`: Utility functions.
+-   `src/pages`: Top-level page components that compose features.
+-   `src/services`: Abstraction layer for external services (e.g., `firebase`).
+-   `src/store`: Zustand stores for global state management.
+-   `src/types`: TypeScript type definitions for domain models.
 
-- To run the tests, run:
-  ```bash
-  pnpm test
-  ```
+## 8. Key Features (PoC Scope)
+
+-   **Authentication:** User sign-in/sign-out, protected routes, role-based access control (admin/member).
+-   **Schedule Viewing & Booking:** Members can view available sessions and book/cancel their spots.
+-   **User Profiles:** Display of user information, including a unique `friendId`.
+-   **Social Features (Privacy-First):** Add friends by `friendId` (double opt-in), optional activity sharing.
+-   **Admin Management (Placeholders):** Basic interfaces for schedule and program management.
+
+## 9. Testing
+
+*(Testing framework and tests are not yet implemented in this PoC. Future plans include unit and integration tests.)*
+
+## 10. Deployment
+
+To build the application for production:
+
+```bash
+pnpm run build
+# or npm run build
+```
+
+The build artifacts will be generated in the `dist/` directory.
+
+## 11. Contributing
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/your-feature-name`).
+3.  Make your changes.
+4.  Ensure code adheres to ESLint rules (`pnpm run lint` or `npm run lint`).
+5.  Commit your changes (`git commit -m "feat: Add new feature"`).
+6.  Push to the branch (`git push origin feature/your-feature-name`).
+7.  Open a Pull Request.

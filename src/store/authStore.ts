@@ -1,26 +1,23 @@
 import { create } from 'zustand';
-import type { UserProfile } from '@/types';
+import { User } from 'firebase/auth'; // Assuming Firebase User type
+import { UserProfile } from '../types';
 
-interface AuthState {
-  isAuthReady: boolean;
-  isAuthenticated: boolean;
-  user: UserProfile | null;
-  appId: string; // From __app_id
-  userId: string | null; // From auth.currentUser
-  setAuthReady: (isReady: boolean) => void;
-  setUser: (user: UserProfile | null) => void;
-  setAppId: (appId: string) => void;
-  setUserId: (userId: string | null) => void;
+interface AuthStore {
+  user: User | null;
+  userProfile: UserProfile | null;
+  authReady: boolean;
+  setUser: (user: User | null) => void;
+  setUserProfile: (profile: UserProfile | null) => void;
+  setAuthReady: (ready: boolean) => void;
+  logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  isAuthReady: false,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
-  appId: 'default-app-id',
-  userId: null,
-  setAuthReady: (isReady) => set({ isAuthReady: isReady }),
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
-  setAppId: (appId) => set({ appId }),
-  setUserId: (userId) => set({ userId }),
+  userProfile: null,
+  authReady: false,
+  setUser: (user) => set({ user }),
+  setUserProfile: (userProfile) => set({ userProfile }),
+  setAuthReady: (authReady) => set({ authReady }),
+  logout: () => set({ user: null, userProfile: null, authReady: false }),
 }));

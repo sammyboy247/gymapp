@@ -1,10 +1,22 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { LogOut, User, LayoutDashboard, Calendar } from 'lucide-react';
+import { authService } from '@/services/firebase/authService';
 
 export const Navbar: React.FC = () => {
-  const { isAuthenticated, user } = useAuthStore();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    try {
+      await authService.signOut();
+      logout(); // Clear store
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <nav className="bg-white shadow-md">
@@ -26,7 +38,7 @@ export const Navbar: React.FC = () => {
               <Link to="/profile" className="flex items-center text-zinc-600 hover:text-blue-600">
                 <User className="w-5 h-5 mr-1" /> Profile
               </Link>
-              <button onClick={() => {/* Add auth.signOut() logic here */}} className="flex items-center text-red-500 hover:text-red-700">
+              <button onClick={handleLogout} className="flex items-center text-red-500 hover:text-red-700">
                 <LogOut className="w-5 h-5 mr-1" /> Logout
               </button>
             </>
