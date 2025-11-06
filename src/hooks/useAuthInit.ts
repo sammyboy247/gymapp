@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'fi
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/services/firebase';
 import { useAuthStore } from '@/store/authStore';
-import { UserProfile } from '@/types';
+import type { UserProfile } from '@/types';
 
 // Provided by Canvas environment
 declare const __app_id: string | undefined;
