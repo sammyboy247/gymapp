@@ -1299,7 +1299,7 @@ _Pending execution_
 ### Phase 1 - Scaffold (COMPLETE)
 - [x] TASK-001 through TASK-022
 
-### Phase 2 - Enhancement (PENDING)
+### Phase 2 - Enhancement (COMPLETE)
 - [x] TASK-023 - Verify All Files Exist
 - [x] TASK-024 - Verify Git Commit
 - [x] TASK-025 - Create Zustand Store
@@ -1310,9 +1310,9 @@ _Pending execution_
 - [x] TASK-030 - Path Aliases
 - [x] TASK-031 - ESLint Rules
 - [x] TASK-032 - README Documentation
-- [ ] TASK-033 - Commit Checkpoint
-- [ ] TASK-034 - Final Build Verification
-- [ ] TASK-035 - Update Status Report
+- [x] TASK-033 - Commit Checkpoint
+- [x] TASK-034 - Final Build Verification
+- [x] TASK-035 - Update Status Report
 
 **Total Phase 2 Tasks:** 13
 **Status:** Ready to begin execution
@@ -1350,3 +1350,1127 @@ Phase 2 will be considered complete when:
 7. All changes committed and pushed
 8. Build succeeds without errors
 9. STATUS-REPORT.md updated
+
+---
+
+# PHASE 3: FEATURE IMPLEMENTATION
+
+**Added:** 2025-11-10
+**Phase:** Core PoC Features - Booking, Admin, Social
+**Status:** READY TO BEGIN
+
+---
+
+## 🎯 Phase 3 Overview
+
+Implement the core PoC features as defined in GymApp.md:
+- Schedule viewing and booking workflow
+- Admin schedule and program management
+- Privacy-first friend system with double opt-in
+- Activity sharing between confirmed friends
+
+**Strategy:** Jules handles complex multi-file features, Gemini coordinates verification and git operations.
+
+---
+
+## 🚀 JULES TASKS (Execute Asynchronously)
+
+### TASK-036: Implement Schedule Booking System
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** Phase 2 complete
+**Estimated Duration:** 60-90 minutes
+**Priority:** CRITICAL - Core PoC feature
+
+**Description:**
+Implement the complete schedule booking workflow including viewing available sessions, booking/canceling spots, program selection at booking time, and real-time availability updates.
+
+**Jules Instructions:**
+```
+Implement the schedule booking system for GymApp with the following requirements:
+
+CONTEXT:
+- Location: src/features/schedule/
+- Use existing Firebase services (scheduleService.ts)
+- Follow feature-driven architecture
+- Reference types in src/types/index.ts
+
+FEATURES TO IMPLEMENT:
+
+1. SCHEDULE VIEW COMPONENT (src/features/schedule/components/ScheduleView.tsx)
+   - Display schedule as a calendar/list view
+   - Show session details: time, type, coach, capacity, spots remaining
+   - Filter by date range and session type
+   - Real-time updates from Firestore
+   - Highlight sessions user is booked into
+   - Show friend activity (if privacy settings allow)
+   - Click to open BookingModal
+
+2. BOOKING MODAL COMPONENT (src/features/schedule/components/BookingModal.tsx)
+   - Display selected session details
+   - Show current booking status
+   - Program selection dropdown:
+     * Default session program
+     * User's assigned personal programs (if any)
+   - Book button (disabled if full or already booked)
+   - Cancel booking button (if already booked)
+   - Confirm/Cancel actions
+   - Error handling and loading states
+
+3. SCHEDULE SERVICE UPDATES (src/services/firebase/scheduleService.ts)
+   - getSchedules(startDate, endDate, filters) - with real-time listener
+   - getSessionById(sessionId)
+   - bookSession(sessionId, userId, programId)
+   - cancelBooking(bookingId, sessionId, userId)
+   - getUserBookings(userId)
+   - checkSessionCapacity(sessionId)
+   - getSessionBookings(sessionId) - for roster view
+
+4. FIRESTORE OPERATIONS:
+   - Query schedules collection with date range
+   - Transaction for booking (ensure capacity not exceeded)
+   - Update spots_remaining atomically
+   - Create booking document in bookings collection
+   - Handle concurrent bookings safely
+
+5. TYPES TO ADD (src/types/index.ts):
+```typescript
+export interface Schedule {
+  id: string;
+  sessionType: string;
+  startTime: Timestamp;
+  endTime: Timestamp;
+  coachId: string;
+  coachName: string;
+  capacity: number;
+  spotsRemaining: number;
+  defaultProgramId?: string;
+  location?: string;
+  description?: string;
+}
+
+export interface Booking {
+  id: string;
+  userId: string;
+  sessionId: string;
+  programId: string;
+  bookedAt: Timestamp;
+  status: 'active' | 'cancelled';
+}
+```
+
+REQUIREMENTS:
+- Use Firestore transactions for bookings
+- Implement optimistic UI updates
+- Show clear error messages
+- Handle edge cases (session full, double booking)
+- Use Tailwind CSS for styling
+- Add loading skeletons
+- Make responsive for mobile
+
+FILES TO CREATE/MODIFY:
+- src/features/schedule/components/ScheduleView.tsx (rewrite)
+- src/features/schedule/components/BookingModal.tsx (rewrite)
+- src/services/firebase/scheduleService.ts (add functions)
+- src/types/index.ts (add types)
+
+VERIFICATION:
+- User can view schedule
+- User can book available sessions
+- User can cancel their bookings
+- Program selection works
+- Capacity enforced correctly
+- Real-time updates work
+```
+
+**Gemini Verification Task:** TASK-042
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-037: Implement Admin Schedule Management
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** TASK-036 (schedule types defined)
+**Estimated Duration:** 45-60 minutes
+**Priority:** HIGH - Admin features
+
+**Description:**
+Implement admin interface for creating, editing, and deleting schedule entries. Includes session creation wizard, bulk operations, and roster viewing.
+
+**Jules Instructions:**
+```
+Implement admin schedule management for GymApp:
+
+CONTEXT:
+- Location: src/features/admin/
+- Admin/Coach roles only
+- Use scheduleService.ts
+- Must show session rosters
+
+FEATURES TO IMPLEMENT:
+
+1. SCHEDULE MANAGER COMPONENT (src/features/admin/components/ScheduleManager.tsx)
+   - Calendar view of all sessions
+   - Create new session button → opens SessionFormModal
+   - Click session to edit → opens SessionFormModal with data
+   - View roster button → opens RosterModal
+   - Delete session with confirmation
+   - Bulk delete for past sessions
+   - Filter and search
+
+2. SESSION FORM MODAL (src/features/admin/components/SessionFormModal.tsx)
+   - Form fields:
+     * Session type (dropdown)
+     * Date and time (date picker)
+     * Duration
+     * Coach selection (dropdown of coaches)
+     * Capacity (number input)
+     * Default program (optional)
+     * Location
+     * Description
+   - Validation
+   - Create/Update modes
+   - Save to Firestore
+
+3. ROSTER MODAL (src/features/admin/components/RosterModal.tsx)
+   - List all members booked into selected session
+   - Show: member name, program selected, booking time
+   - Manual add member (search by name/Friend ID)
+   - Remove booking (with confirmation)
+   - Export roster (CSV)
+   - Real-time updates
+
+4. SCHEDULE SERVICE ADDITIONS (src/services/firebase/scheduleService.ts):
+   - createSchedule(scheduleData)
+   - updateSchedule(sessionId, updates)
+   - deleteSchedule(sessionId)
+   - bulkDeleteSchedules(sessionIds)
+   - getSessionRoster(sessionId) - returns bookings with user details
+   - adminAddBooking(sessionId, userId, programId)
+   - adminRemoveBooking(bookingId)
+
+REQUIREMENTS:
+- Only admin/coach can access
+- Validate all inputs
+- Prevent deletion of sessions with bookings (or confirm)
+- Show loading states
+- Error handling
+- Use Lucide React icons
+- Mobile responsive
+
+FILES TO CREATE/MODIFY:
+- src/features/admin/components/ScheduleManager.tsx (rewrite)
+- src/features/admin/components/SessionFormModal.tsx (new)
+- src/features/admin/components/RosterModal.tsx (new)
+- src/services/firebase/scheduleService.ts (add admin functions)
+
+VERIFICATION:
+- Admin can create sessions
+- Admin can edit sessions
+- Admin can delete sessions
+- Admin can view rosters
+- Admin can manually add/remove bookings
+```
+
+**Gemini Verification Task:** TASK-043
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-038: Implement Program Creation & Assignment
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** TASK-037 (admin components structure)
+**Estimated Duration:** 45-60 minutes
+**Priority:** HIGH - Required for booking workflow
+
+**Description:**
+Implement admin interface for creating workout programs and assigning them to members. Programs are shown in booking modal for member selection.
+
+**Jules Instructions:**
+```
+Implement program management for GymApp:
+
+CONTEXT:
+- Location: src/features/admin/
+- Programs assigned by coaches to members
+- Members select program when booking
+- Programs referenced in types/index.ts
+
+FEATURES TO IMPLEMENT:
+
+1. PROGRAM MANAGER COMPONENT (src/features/admin/components/ProgramManager.tsx)
+   - List all programs (searchable/filterable)
+   - Create program button → opens ProgramFormModal
+   - Edit program → opens ProgramFormModal
+   - Delete program (check if assigned first)
+   - Assign program to member → opens AssignProgramModal
+   - View assignments
+
+2. PROGRAM FORM MODAL (src/features/admin/components/ProgramFormModal.tsx)
+   - Form fields:
+     * Program name
+     * Description
+     * Program type (strength, cardio, hybrid, etc.)
+     * Duration (weeks)
+     * Exercises (simple list for PoC)
+     * Active/Inactive toggle
+   - Create/Update modes
+   - Validation
+
+3. ASSIGN PROGRAM MODAL (src/features/admin/components/AssignProgramModal.tsx)
+   - Search member by name or Friend ID
+   - Display member info
+   - Select program from dropdown
+   - Set assignment dates (start, end)
+   - Add notes
+   - Submit assignment
+
+4. PROGRAM SERVICE (src/services/firebase/programService.ts) - NEW FILE:
+   - createProgram(programData)
+   - updateProgram(programId, updates)
+   - deleteProgram(programId)
+   - getPrograms() - all programs
+   - getProgramById(programId)
+   - assignProgram(programId, userId, startDate, endDate, notes)
+   - unassignProgram(assignmentId)
+   - getUserPrograms(userId) - get user's active programs
+   - getProgramAssignments(programId) - who has this program
+
+5. TYPES TO ADD (src/types/index.ts):
+```typescript
+export interface Program {
+  id: string;
+  name: string;
+  description: string;
+  type: 'strength' | 'cardio' | 'hybrid' | 'flexibility' | 'other';
+  durationWeeks?: number;
+  exercises?: string[]; // Simple list for PoC
+  isActive: boolean;
+  createdBy: string;
+  createdAt: Timestamp;
+}
+
+export interface ProgramAssignment {
+  id: string;
+  programId: string;
+  userId: string;
+  assignedBy: string;
+  startDate: Timestamp;
+  endDate?: Timestamp;
+  notes?: string;
+  status: 'active' | 'completed' | 'cancelled';
+}
+```
+
+REQUIREMENTS:
+- Admin/Coach only access
+- Programs must be active to assign
+- Member can have multiple active programs
+- Show in booking modal dropdown
+- Validation on all forms
+- Error handling
+
+FILES TO CREATE/MODIFY:
+- src/features/admin/components/ProgramManager.tsx (rewrite)
+- src/features/admin/components/ProgramFormModal.tsx (new)
+- src/features/admin/components/AssignProgramModal.tsx (new)
+- src/services/firebase/programService.ts (new)
+- src/types/index.ts (add types)
+- src/features/schedule/components/BookingModal.tsx (add program selection)
+
+VERIFICATION:
+- Admin can create programs
+- Admin can assign to members
+- Members see programs in booking modal
+- Can select program when booking
+```
+
+**Gemini Verification Task:** TASK-044
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-039: Implement Privacy-First Friend System
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** Phase 2 (userService exists)
+**Estimated Duration:** 60-75 minutes
+**Priority:** HIGH - Core social feature
+
+**Description:**
+Implement the privacy-first friend system where users can only search by Friend ID, with double opt-in friend requests, and activity sharing preferences.
+
+**Jules Instructions:**
+```
+Implement privacy-first friend system for GymApp:
+
+CONTEXT:
+- Location: src/features/social/
+- Friend ID is ONLY searchable identifier
+- Double opt-in: request → accept/deny
+- Activity sharing is opt-in per user
+- Reference types/index.ts
+
+FEATURES TO IMPLEMENT:
+
+1. FRIEND MANAGER COMPONENT (src/features/social/components/FriendManager.tsx)
+   - Display user's Friend ID prominently (copy button)
+   - Search bar: "Search by Friend ID"
+   - Send friend request button (after search)
+   - Tabs:
+     * Friends (confirmed friendships)
+     * Pending Sent (requests user sent)
+     * Pending Received (requests user received)
+   - Accept/Deny buttons for received requests
+   - Remove friend (with confirmation)
+   - Activity sharing toggle per user
+
+2. FRIEND SEARCH (src/features/social/components/FriendSearch.tsx)
+   - Input for exact Friend ID match
+   - Search button
+   - Display found user (name, Friend ID only - no other info)
+   - Send request button
+   - Handle not found case
+   - Privacy notice
+
+3. FRIEND LIST (src/features/social/components/FriendList.tsx)
+   - List confirmed friends
+   - Show friend name, Friend ID
+   - Activity sharing status indicator
+   - Remove friend button
+   - Empty state message
+
+4. FRIEND REQUESTS (src/features/social/components/FriendRequests.tsx)
+   - Separate sections for sent/received
+   - Show requester/recipient info
+   - Accept/Deny buttons (received)
+   - Cancel button (sent)
+   - Request date
+
+5. FRIEND SERVICE (src/services/firebase/friendService.ts) - NEW FILE:
+   - searchByFriendId(friendId) - returns public user data only
+   - sendFriendRequest(fromUserId, toUserId)
+   - acceptFriendRequest(requestId)
+   - denyFriendRequest(requestId)
+   - cancelFriendRequest(requestId)
+   - removeFriend(friendshipId)
+   - getUserFriends(userId)
+   - getPendingRequests(userId, type: 'sent' | 'received')
+   - updateActivitySharing(userId, friendId, shareActivity: boolean)
+   - getFriendsWithActivitySharing(userId) - for schedule view
+
+6. TYPES TO ADD (src/types/index.ts):
+```typescript
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'denied';
+  createdAt: Timestamp;
+  respondedAt?: Timestamp;
+}
+
+export interface Friendship {
+  id: string;
+  user1Id: string;
+  user2Id: string;
+  createdAt: Timestamp;
+  user1ShareActivity: boolean;
+  user2ShareActivity: boolean;
+}
+
+export interface PublicUserData {
+  userId: string;
+  displayName: string;
+  friendId: string;
+}
+```
+
+FIRESTORE STRUCTURE:
+```
+friendRequests/
+  {requestId}: { fromUserId, toUserId, status, createdAt }
+
+friendships/
+  {friendshipId}: { user1Id, user2Id, createdAt, sharing settings }
+```
+
+REQUIREMENTS:
+- NEVER expose email or real names in search
+- Only Friend ID is searchable
+- Double opt-in required
+- Activity sharing OFF by default
+- Clear privacy messaging
+- Real-time updates for requests
+- Validate Friend ID format
+
+FILES TO CREATE/MODIFY:
+- src/features/social/components/FriendManager.tsx (rewrite)
+- src/features/social/components/FriendSearch.tsx (new)
+- src/features/social/components/FriendList.tsx (new)
+- src/features/social/components/FriendRequests.tsx (new)
+- src/services/firebase/friendService.ts (new)
+- src/types/index.ts (add types)
+
+VERIFICATION:
+- Can search only by Friend ID
+- Can send friend requests
+- Can accept/deny requests
+- Activity sharing toggles work
+- Privacy maintained
+```
+
+**Gemini Verification Task:** TASK-045
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-040: Implement Friend Activity in Schedule View
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** TASK-036, TASK-039 (schedule and friends implemented)
+**Estimated Duration:** 30-45 minutes
+**Priority:** MEDIUM - Social enhancement
+
+**Description:**
+Add friend activity indicators to the schedule view, showing which sessions friends are booked into (only if both users have activity sharing enabled).
+
+**Jules Instructions:**
+```
+Add friend activity to schedule view for GymApp:
+
+CONTEXT:
+- Enhance existing ScheduleView component
+- Show friend bookings on schedule
+- Respect privacy: only show if BOTH users share activity
+- Use existing friendService and scheduleService
+
+FEATURES TO IMPLEMENT:
+
+1. SCHEDULE VIEW UPDATES (src/features/schedule/components/ScheduleView.tsx)
+   - Add friend activity section to each session card
+   - Show avatars/names of friends booked in
+   - "3 friends attending" indicator
+   - Hover/click to see friend names
+   - Empty state: "None of your friends are attending"
+   - Only visible if user has friends with sharing ON
+
+2. FRIEND ACTIVITY BADGE (src/features/schedule/components/FriendActivityBadge.tsx)
+   - Small component showing friend info
+   - Friend count bubble
+   - Expandable list on click
+   - Icons using Lucide React
+
+3. SCHEDULE SERVICE UPDATES (src/services/firebase/scheduleService.ts):
+   - getFriendActivityForSession(sessionId, userId) - returns friends booked
+   - This should:
+     * Get user's friends with activity sharing ON
+     * Check which of those friends are booked into session
+     * Return array of friend names/IDs
+
+4. FRIEND SERVICE ADDITION (src/services/firebase/friendService.ts):
+   - getFriendsWithActivitySharing(userId) - returns list of friend IDs
+
+REQUIREMENTS:
+- Respect privacy (both must share)
+- Performance: don't query for every session
+- Batch operations where possible
+- Subtle UI (don't overwhelm schedule)
+- Mobile friendly
+- Real-time updates
+
+FILES TO CREATE/MODIFY:
+- src/features/schedule/components/ScheduleView.tsx (modify)
+- src/features/schedule/components/FriendActivityBadge.tsx (new)
+- src/services/firebase/scheduleService.ts (add function)
+- src/services/firebase/friendService.ts (add function)
+
+VERIFICATION:
+- Friend activity shows on sessions
+- Only shows when both share activity
+- Updates in real-time
+- Performance is acceptable
+- UI is clear and not cluttered
+```
+
+**Gemini Verification Task:** TASK-046
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-041: Enhance User Profile with Programs & Settings
+**Agent:** Jules
+**Status:** PENDING
+**Dependencies:** TASK-038, TASK-039 (programs and friends exist)
+**Estimated Duration:** 30-45 minutes
+**Priority:** MEDIUM - User experience
+
+**Description:**
+Enhance the user profile page to show assigned programs, activity sharing settings, and friend management integration.
+
+**Jules Instructions:**
+```
+Enhance user profile page for GymApp:
+
+CONTEXT:
+- Location: src/pages/ProfilePage.tsx and src/features/auth/
+- Show user's assigned programs
+- Privacy settings
+- Friend management integration
+
+FEATURES TO IMPLEMENT:
+
+1. USER PROFILE DETAILS UPDATE (src/features/auth/UserProfileDetails.tsx)
+   - Current: name, email, role, Friend ID
+   - Add sections:
+     * My Programs (show assigned programs with dates)
+     * Activity Sharing (global toggle)
+     * Account settings (change display name)
+
+2. MY PROGRAMS SECTION (src/features/auth/components/MyPrograms.tsx) - NEW
+   - List active program assignments
+   - Show: program name, assigned by, dates
+   - View program details button
+   - "No programs assigned" empty state
+
+3. PROGRAM DETAILS MODAL (src/features/auth/components/ProgramDetailsModal.tsx) - NEW
+   - Display full program info
+   - Exercises list
+   - Duration, type
+   - Notes from coach
+   - Close button
+
+4. PRIVACY SETTINGS (src/features/auth/components/PrivacySettings.tsx) - NEW
+   - Global activity sharing toggle
+   - Explanation of what's shared
+   - Link to friend management
+
+5. USER SERVICE UPDATES (src/services/firebase/userService.ts):
+   - getUserPrograms(userId) - get assigned programs
+   - updateActivitySharing(userId, shareActivity: boolean)
+   - updateDisplayName(userId, newName: string)
+
+REQUIREMENTS:
+- Clean, organized layout
+- Show active vs completed programs
+- Privacy controls prominent
+- Mobile responsive
+- Real-time updates
+
+FILES TO CREATE/MODIFY:
+- src/features/auth/UserProfileDetails.tsx (enhance)
+- src/features/auth/components/MyPrograms.tsx (new)
+- src/features/auth/components/ProgramDetailsModal.tsx (new)
+- src/features/auth/components/PrivacySettings.tsx (new)
+- src/services/firebase/userService.ts (add functions)
+- src/pages/ProfilePage.tsx (restructure layout)
+
+VERIFICATION:
+- User sees assigned programs
+- Can toggle activity sharing
+- Can update display name
+- Layout is organized
+```
+
+**Gemini Verification Task:** TASK-047
+
+**Result:**
+_Pending execution_
+
+---
+
+## 🔧 GEMINI COORDINATION TASKS
+
+### TASK-042: Monitor & Integrate Schedule Booking System
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-036 Jules execution
+**Estimated Duration:** 15-20 minutes
+
+**Description:**
+Monitor Jules session for TASK-036, verify completion, integrate changes, and run verification tests.
+
+**Instructions:**
+```powershell
+# 1. Check Jules session status (wait 5+ minutes after initiation)
+jules remote list --session
+
+# 2. When complete, pull and apply changes
+jules remote pull --session [SESSION_ID] --apply
+
+# 3. Review changes
+cd d:\dev\gymApp
+git status
+git diff
+
+# 4. Verify files were created/modified
+Test-Path src\features\schedule\components\ScheduleView.tsx
+Test-Path src\features\schedule\components\BookingModal.tsx
+Test-Path src\services\firebase\scheduleService.ts
+Test-Path src\types\index.ts
+
+# 5. Build verification
+npm run build
+
+# 6. If successful, commit
+git add .
+git commit -m "feat: implement schedule booking system
+
+- Add ScheduleView with calendar display
+- Implement BookingModal with program selection
+- Add schedule service Firestore operations
+- Support booking, canceling, capacity checks
+- Add real-time updates
+- Include Schedule and Booking types
+
+Implements core PoC booking workflow."
+
+git push origin main
+
+# 7. Update STATUS-REPORT.md
+# Mark TASK-036 and TASK-042 as COMPLETE
+```
+
+**Verification:**
+- Jules session completed successfully
+- All expected files exist
+- Build passes
+- Git commit successful
+- Status report updated
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-043: Monitor & Integrate Admin Schedule Management
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-037 Jules execution, TASK-042 complete
+**Estimated Duration:** 15-20 minutes
+
+**Description:**
+Monitor Jules session for TASK-037, integrate admin schedule management features.
+
+**Instructions:**
+```powershell
+# Follow same pattern as TASK-042
+
+# Verify files:
+Test-Path src\features\admin\components\ScheduleManager.tsx
+Test-Path src\features\admin\components\SessionFormModal.tsx
+Test-Path src\features\admin\components\RosterModal.tsx
+
+# Build and commit
+npm run build
+git add .
+git commit -m "feat: implement admin schedule management
+
+- Add ScheduleManager CRUD interface
+- Implement SessionFormModal for creating/editing
+- Add RosterModal for viewing bookings
+- Support bulk operations
+- Add admin schedule service functions
+
+Implements admin schedule features for PoC."
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-044: Monitor & Integrate Program Management
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-038 Jules execution, TASK-043 complete
+**Estimated Duration:** 15-20 minutes
+
+**Description:**
+Monitor Jules session for TASK-038, integrate program creation and assignment features.
+
+**Instructions:**
+```powershell
+# Follow same pattern
+
+# Verify files:
+Test-Path src\features\admin\components\ProgramManager.tsx
+Test-Path src\features\admin\components\ProgramFormModal.tsx
+Test-Path src\features\admin\components\AssignProgramModal.tsx
+Test-Path src\services\firebase\programService.ts
+
+# Build and commit
+npm run build
+git add .
+git commit -m "feat: implement program creation and assignment
+
+- Add ProgramManager for creating programs
+- Implement ProgramFormModal and AssignProgramModal
+- Add programService with Firestore operations
+- Support assigning programs to members
+- Add Program and ProgramAssignment types
+- Integrate with booking workflow
+
+Implements program management for PoC."
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-045: Monitor & Integrate Friend System
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-039 Jules execution, TASK-044 complete
+**Estimated Duration:** 15-20 minutes
+
+**Description:**
+Monitor Jules session for TASK-039, integrate privacy-first friend system.
+
+**Instructions:**
+```powershell
+# Follow same pattern
+
+# Verify files:
+Test-Path src\features\social\components\FriendManager.tsx
+Test-Path src\features\social\components\FriendSearch.tsx
+Test-Path src\features\social\components\FriendList.tsx
+Test-Path src\features\social\components\FriendRequests.tsx
+Test-Path src\services\firebase\friendService.ts
+
+# Build and commit
+npm run build
+git add .
+git commit -m "feat: implement privacy-first friend system
+
+- Add FriendManager with Friend ID search
+- Implement double opt-in friend requests
+- Add FriendList and FriendRequests components
+- Create friendService with Firestore operations
+- Support activity sharing preferences
+- Add Friend and Friendship types
+- Enforce privacy-first model
+
+Implements core social features for PoC."
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-046: Monitor & Integrate Friend Activity Display
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-040 Jules execution, TASK-045 complete
+**Estimated Duration:** 10-15 minutes
+
+**Description:**
+Monitor Jules session for TASK-040, integrate friend activity in schedule view.
+
+**Instructions:**
+```powershell
+# Follow same pattern
+
+# Verify files:
+Test-Path src\features\schedule\components\FriendActivityBadge.tsx
+
+# Build and commit
+npm run build
+git add .
+git commit -m "feat: add friend activity to schedule view
+
+- Show friends booked into sessions
+- Add FriendActivityBadge component
+- Respect privacy settings (both must share)
+- Add friend activity queries
+- Real-time updates
+
+Completes social integration with booking."
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-047: Monitor & Integrate Profile Enhancements
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-041 Jules execution, TASK-046 complete
+**Estimated Duration:** 10-15 minutes
+
+**Description:**
+Monitor Jules session for TASK-041, integrate profile page enhancements.
+
+**Instructions:**
+```powershell
+# Follow same pattern
+
+# Verify files:
+Test-Path src\features\auth\components\MyPrograms.tsx
+Test-Path src\features\auth\components\ProgramDetailsModal.tsx
+Test-Path src\features\auth\components\PrivacySettings.tsx
+
+# Build and commit
+npm run build
+git add .
+git commit -m "feat: enhance user profile with programs and settings
+
+- Add MyPrograms section showing assignments
+- Implement ProgramDetailsModal
+- Add PrivacySettings for activity sharing
+- Support display name updates
+- Improve profile layout
+
+Completes user profile features for PoC."
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-048: 💾 COMMIT CHECKPOINT - Phase 3 Complete
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-042 through TASK-047 complete
+**Estimated Duration:** 10 minutes
+
+**Description:**
+Final verification and status update for Phase 3 feature implementation.
+
+**Instructions:**
+```powershell
+cd d:\dev\gymApp
+
+# Final build verification
+npm run build
+
+# Verify all feature files exist
+Test-Path src\features\schedule\components\ScheduleView.tsx
+Test-Path src\features\schedule\components\BookingModal.tsx
+Test-Path src\features\admin\components\ScheduleManager.tsx
+Test-Path src\features\admin\components\ProgramManager.tsx
+Test-Path src\features\social\components\FriendManager.tsx
+
+# Check git status
+git status
+git log --oneline -10
+
+# Update STATUS-REPORT.md
+# - Mark Phase 3 as COMPLETE
+# - List all features implemented
+# - Note any issues discovered
+# - Set status to GREEN if all tasks passed
+# - Document next steps (testing, Firebase setup)
+
+# Commit status update
+git add .dev-pipeline\STATUS-REPORT.md
+git commit -m "docs: update status report - Phase 3 complete"
+git push origin main
+```
+
+**Verification:**
+- All Jules tasks completed successfully
+- All builds passed
+- All commits pushed
+- STATUS-REPORT.md updated
+- Project health: GREEN
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-049: Create Firestore Rules for PoC Features
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-048 complete
+**Estimated Duration:** 20-30 minutes
+
+**Description:**
+Update firestore.rules with security rules for schedules, bookings, programs, and friend system.
+
+**Instructions:**
+```powershell
+cd d:\dev\gymApp
+
+# Create comprehensive Firestore rules
+# Edit firestore.rules file with rules for:
+# - schedules collection (read: all auth, write: admin/coach)
+# - bookings collection (read: own bookings, write: own + capacity check)
+# - programs collection (read: all auth, write: admin/coach)
+# - programAssignments (read: own + admin, write: admin/coach)
+# - friendRequests (read: own, write: own with validation)
+# - friendships (read: participants only, write: validated)
+
+# Test rules locally if possible
+# Commit rules
+git add firestore.rules
+git commit -m "feat: add Firestore security rules for PoC features
+
+- Add rules for schedules and bookings
+- Secure programs and assignments
+- Protect friend system collections
+- Enforce role-based access
+- Validate data on write"
+
+git push origin main
+```
+
+**Verification:**
+- Rules syntax is valid
+- Proper access control implemented
+- Admin/coach roles enforced
+- Privacy maintained
+
+**Result:**
+_Pending execution_
+
+---
+
+### TASK-050: Update README with Feature Documentation
+**Agent:** Gemini
+**Status:** PENDING
+**Dependencies:** TASK-049 complete
+**Estimated Duration:** 15-20 minutes
+
+**Description:**
+Update README.md to document all implemented features, usage guide, and Firebase setup requirements.
+
+**Instructions:**
+```powershell
+cd d:\dev\gymApp
+
+# Update README.md to include:
+# 1. Feature overview (all implemented features)
+# 2. User guide sections:
+#    - Member: booking workflow
+#    - Admin: schedule and program management
+#    - Social: friend system usage
+# 3. Firebase setup:
+#    - Required collections
+#    - Security rules deployment
+#    - Initial data setup
+# 4. Testing instructions
+# 5. Known limitations
+
+# Commit documentation
+git add README.md
+git commit -m "docs: update README with PoC feature documentation
+
+- Document booking workflow
+- Add admin features guide
+- Explain friend system usage
+- Include Firebase setup instructions
+- Add testing guide"
+
+git push origin main
+```
+
+**Result:**
+_Pending execution_
+
+---
+
+## Phase 3 Progress Tracking
+
+**Jules Tasks (Asynchronous):**
+- [ ] TASK-036 - Schedule Booking System (60-90 min)
+- [ ] TASK-037 - Admin Schedule Management (45-60 min)
+- [ ] TASK-038 - Program Creation & Assignment (45-60 min)
+- [ ] TASK-039 - Privacy-First Friend System (60-75 min)
+- [ ] TASK-040 - Friend Activity Display (30-45 min)
+- [ ] TASK-041 - Profile Enhancements (30-45 min)
+
+**Gemini Tasks (Coordination):**
+- [ ] TASK-042 - Integrate Schedule Booking
+- [ ] TASK-043 - Integrate Admin Schedule
+- [ ] TASK-044 - Integrate Program Management
+- [ ] TASK-045 - Integrate Friend System
+- [ ] TASK-046 - Integrate Friend Activity
+- [ ] TASK-047 - Integrate Profile Enhancements
+- [ ] TASK-048 - Phase 3 Checkpoint
+- [ ] TASK-049 - Firestore Rules
+- [ ] TASK-050 - README Documentation
+
+**Total Phase 3 Tasks:** 15
+**Jules Tasks:** 6 (can run in parallel/sequence)
+**Gemini Tasks:** 9 (integration and coordination)
+
+---
+
+## 🎯 Execution Strategy
+
+### Recommended Approach:
+
+**Option A: Sequential Jules Execution**
+1. Start TASK-036 (Schedule Booking) - Foundation
+2. Wait for completion, integrate (TASK-042)
+3. Start TASK-037 (Admin Schedule) - Builds on 036
+4. Continue pattern through all Jules tasks
+
+**Option B: Parallel Jules Execution (Faster)**
+1. Start multiple Jules tasks simultaneously:
+   - TASK-036 (Schedule Booking)
+   - TASK-039 (Friend System) - Independent
+2. Start dependent tasks after prerequisites:
+   - TASK-037 after TASK-036 complete
+   - TASK-038 after TASK-037 complete
+   - TASK-040 after both TASK-036 and TASK-039
+   - TASK-041 after TASK-038 and TASK-039
+
+**Recommendation:** Start with Option A for first task to test Jules workflow, then proceed with Option B if comfortable.
+
+---
+
+## Notes for Execution
+
+### Critical Reminders for Gemini:
+- ⚠️ Wait minimum 5 minutes before checking Jules status
+- 🔄 Use `jules remote list --session` to check progress
+- ⏰ Jules tasks may take 30-90 minutes each
+- 📋 Always verify files exist before committing
+- 🏗️ Always run `npm run build` before committing
+- 📝 Update STATUS-REPORT.md after each integration
+
+### Success Criteria for Phase 3:
+- All 6 Jules features implemented
+- All builds pass
+- All features integrated and committed
+- Firestore rules created
+- Documentation updated
+- Ready for manual testing with Firebase
+
+### Testing Notes:
+- Manual testing required after Phase 3
+- Firebase project must be configured
+- Test data needed for schedules, programs
+- Multiple test users for friend system
+- Consider creating seed data script
+
+---

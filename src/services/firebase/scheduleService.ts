@@ -1,6 +1,6 @@
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './config';
-import { Schedule, Booking } from '../../types';
+import type { Schedule, Booking } from '../../types';
 
 interface ScheduleService {
   getSchedules: () => Promise<Schedule[]>;

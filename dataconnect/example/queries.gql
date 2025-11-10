@@ -1,0 +1,40 @@
+mutation CreateNewPost($content: String!, $imageUrl: String, $videoUrl: String) @auth(level: USER) {
+  post_insert(data: {
+    userId_expr: "auth.uid",
+    content: $content,
+    imageUrl: $imageUrl,
+    videoUrl: $videoUrl,
+    createdAt_expr: "request.time"
+  })
+}
+
+query GetMyPosts @auth(level: USER) {
+  posts(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    content
+    imageUrl
+    videoUrl
+    createdAt
+  }
+}
+
+mutation JoinGroup($groupId: UUID!) @auth(level: USER) {
+  groupMembership_insert(data: {
+    userId_expr: "auth.uid",
+    groupId: $groupId,
+    joinedAt_expr: "request.time"
+  })
+}
+
+query ListPublicGroups @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  groups(where: {isPublic: {eq: true}}) {
+    id
+    name
+    description
+    createdAt
+    creator {
+      id
+      displayName
+    }
+  }
+}

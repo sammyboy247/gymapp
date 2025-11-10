@@ -1,0 +1,48 @@
+mutation SeedDatabase @auth(level: NO_ACCESS) @transaction {
+  user_insertMany(data: [
+    {
+      id: "6d8c760c-b588-4a1f-8970-3c7592c689c8",
+      displayName: "Demo User 1",
+      email: "demo1@example.com",
+      role: "member",
+      createdAt: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: "7e9d871d-c699-5b2g-9081-4d86a3d790d9",
+      displayName: "Demo User 2",
+      email: "demo2@example.com",
+      role: "member",
+      createdAt: "2024-01-02T00:00:00Z"
+    }
+  ])
+  group_insertMany(data: [
+    {
+      id: "8fae982e-d70a-6c3h-a192-5e97b4e8a1ea",
+      name: "Demo Group 1",
+      description: "Example Group",
+      isPublic: true,
+      creatorId: "6d8c760c-b588-4a1f-8970-3c7592c689c8",
+      createdAt: "2024-01-03T00:00:00Z"
+    },
+    {
+      id: "90bf093f-e81b-7d4i-b203-6f08c5f9b2fb",
+      name: "Demo Group 2",
+      description: "Another Example Group",
+      isPublic: false,
+      creatorId: "7e9d871d-c699-5b2g-9081-4d86a3d790d9",
+      createdAt: "2024-01-04T00:00:00Z"
+    }
+  ])
+  groupMembership_insertMany(data: [
+    {
+      userId: "6d8c760c-b588-4a1f-8970-3c7592c689c8",
+      groupId: "8fae982e-d70a-6c3h-a192-5e97b4e8a1ea",
+      joinedAt: "2024-01-05T00:00:00Z"
+    },
+    {
+      userId: "7e9d871d-c699-5b2g-9081-4d86a3d790d9",
+      groupId: "90bf093f-e81b-7d4i-b203-6f08c5f9b2fb",
+      joinedAt: "2024-01-06T00:00:00Z"
+    }
+  ])
+}

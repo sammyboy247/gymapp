@@ -1,4 +1,5 @@
-import { Auth, signInWithCustomToken, signOut, User } from 'firebase/auth';
+import { signInWithCustomToken, signOut } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { auth } from './config';
 
 interface AuthService {

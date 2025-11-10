@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth'; // Added onAuthStateChanged and User
 import { authService } from '@/services/firebase/authService';
 import { userService } from '@/services/firebase/userService';
 import { auth } from '@/services/firebase/config'; // Keep auth for onAuthStateChanged
@@ -6,7 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@/types';
 
 // Provided by Canvas environment
-declare const __app_id: string | undefined;
+declare const __app_id: string | undefined; // Keep __app_id declaration as it's used in the logic
 declare const __initial_auth_token: string | undefined;
 
 export const useAuthInit = () => {
@@ -14,10 +16,10 @@ export const useAuthInit = () => {
 
   useEffect(() => {
     // 1. Set App ID from global var (no longer stored in store, just used locally)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Removed appId declaration
 
     // 2. Set up auth listener
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => { // Explicitly typed firebaseUser
       if (firebaseUser) {
         // User is signed in
         setUser(firebaseUser); // Set Firebase User object in store

@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from './config';
-import { UserProfile } from '../../types';
+import type { UserProfile } from '../../types';
 
 interface UserService {
   createUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>;

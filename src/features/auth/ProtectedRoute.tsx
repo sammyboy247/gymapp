@@ -7,9 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-  const { isAuthenticated, isAuthReady, user } = useAuthStore();
+  const { user, userProfile, authReady } = useAuthStore();
+  const isAuthenticated = !!user; // Derive isAuthenticated from user
 
-  if (!isAuthReady) {
+  if (!authReady) { // Use authReady
     // Show loading spinner while auth state is being determined
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -22,7 +23,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) 
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && userProfile?.role && !allowedRoles.includes(userProfile.role)) { // Use userProfile.role
     // User is authenticated but not authorized for this route
     return <Navigate to="/schedule" replace />;
   }
