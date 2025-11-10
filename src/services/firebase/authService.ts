@@ -1,33 +1,25 @@
-import { signInWithCustomToken, signOut } from 'firebase/auth';
-import type { User } from 'firebase/auth';
+import {
+  signInWithCustomToken,
+  signOut as firebaseSignOut,
+  User,
+} from 'firebase/auth';
 import { auth } from './config';
 
-interface AuthService {
-  signInWithCustomToken: (token: string) => Promise<User | null>;
-  signOut: () => Promise<void>;
-  getCurrentUser: () => User | null;
-}
+const signInWithToken = async (token: string): Promise<User> => {
+  const userCredential = await signInWithCustomToken(auth, token);
+  return userCredential.user;
+};
 
-export const authService: AuthService = {
-  signInWithCustomToken: async (token: string) => {
-    try {
-      const userCredential = await signInWithCustomToken(auth, token);
-      return userCredential.user;
-    } catch (error) {
-      console.error("Error signing in with custom token:", error);
-      return null;
-    }
-  },
+const signOut = async (): Promise<void> => {
+  await firebaseSignOut(auth);
+};
 
-  signOut: async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  },
+const getCurrentUser = (): User | null => {
+  return auth.currentUser;
+};
 
-  getCurrentUser: () => {
-    return auth.currentUser;
-  },
+export const authService = {
+  signInWithToken,
+  signOut,
+  getCurrentUser,
 };

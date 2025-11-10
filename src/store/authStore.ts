@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { User } from 'firebase/auth'; // Assuming Firebase User type
-import type { UserProfile } from '../types';
+import type { User } from 'firebase/auth';
+import type { UserProfile } from '@/types';
 
 interface AuthStore {
   user: User | null;
@@ -17,7 +17,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   userProfile: null,
   authReady: false,
   setUser: (user) => set({ user }),
-  setUserProfile: (userProfile) => set({ userProfile }),
-  setAuthReady: (authReady) => set({ authReady }),
-  logout: () => set({ user: null, userProfile: null, authReady: false }),
+  setUserProfile: (profile) => set({ userProfile: profile }),
+  setAuthReady: (ready) => set({ authReady: ready }),
+  logout: () => set({ user: null, userProfile: null }),
 }));

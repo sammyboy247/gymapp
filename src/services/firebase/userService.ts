@@ -1,42 +1,36 @@
-import { doc, getDoc, setDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './config';
-import type { UserProfile } from '../../types';
+import type { UserProfile } from '@/types';
 
-interface UserService {
-  createUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>;
-  getUserProfile: (uid: string) => Promise<UserProfile | null>;
-  updateUserProfile: (uid: string, data: Partial<UserProfile>) => Promise<void>;
-  searchByFriendId: (friendId: string) => Promise<UserProfile[]>;
-}
+const createUserProfile = async (userId: string, profileData: Omit<UserProfile, 'id'>): Promise<void> => {
+  await setDoc(doc(db, 'users', userId), profileData);
+};
 
-export const userService: UserService = {
-  createUserProfile: async (uid, data) => {
-    const userProfileRef = doc(db, 'userProfiles', uid);
-    await setDoc(userProfileRef, data, { merge: true });
-  },
+const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const userDoc = await getDoc(doc(db, 'users', userId));
+  if (userDoc.exists()) {
+    return { id: userDoc.id, ...userDoc.data() } as UserProfile;
+  }
+  return null;
+};
 
-  getUserProfile: async (uid) => {
-    const userProfileRef = doc(db, 'userProfiles', uid);
-    const docSnap = await getDoc(userProfileRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as UserProfile;
+const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<void> => {
+  await updateDoc(doc(db, 'users', userId), updates);
+};
+
+const searchByFriendId = async (friendId: string): Promise<UserProfile | null> => {
+    const q = query(collection(db, "users"), where("friendId", "==", friendId));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        return { id: userDoc.id, ...userDoc.data() } as UserProfile;
     }
     return null;
-  },
+}
 
-  updateUserProfile: async (uid, data) => {
-    const userProfileRef = doc(db, 'userProfiles', uid);
-    await setDoc(userProfileRef, data, { merge: true });
-  },
-
-  searchByFriendId: async (friendId) => {
-    const userProfilesRef = collection(db, 'userProfiles');
-    const q = query(userProfilesRef, where('friendId', '==', friendId));
-    const querySnapshot = await getDocs(q);
-    const profiles: UserProfile[] = [];
-    querySnapshot.forEach((doc) => {
-      profiles.push(doc.data() as UserProfile);
-    });
-    return profiles;
-  },
+export const userService = {
+  createUserProfile,
+  getUserProfile,
+  updateUserProfile,
+  searchByFriendId,
 };

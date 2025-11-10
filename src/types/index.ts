@@ -1,63 +1,94 @@
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 // User types
-export type UserRole = 'member' | 'coach' | 'admin';
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+}
 
 export interface UserProfile {
   id: string;
   email: string;
-  name: string;
+  displayName: string;
   role: UserRole;
   friendId: string;
-  shareActivity: boolean;
-  friends: string[];
-  friendRequestsSent: string[];
-  friendRequestsReceived: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
+
+export type UserRole = 'member' | 'coach' | 'admin';
 
 // Schedule types
 export interface Schedule {
   id: string;
-  name: string;
-  description: string;
+  sessionType: string;
   startTime: Timestamp;
   endTime: Timestamp;
-  maxCapacity: number;
-  bookedUserIds: string[];
   coachId: string;
-  programName: string;
+  coachName: string;
+  capacity: number;
+  spotsRemaining: number;
+  defaultProgramId?: string;
+  location?: string;
+  description?: string;
 }
 
 export interface Booking {
   id: string;
   userId: string;
-  scheduleId: string;
+  sessionId: string;
+  programId: string;
   bookedAt: Timestamp;
-  programAssignedId: string;
+  status: 'active' | 'cancelled';
 }
 
 export interface ProgramAssignment {
   id: string;
-  userId: string;
   programId: string;
+  userId: string;
   assignedBy: string;
-  assignedAt: Timestamp;
+  startDate: Timestamp;
+  endDate?: Timestamp;
+  notes?: string;
+  status: 'active' | 'completed' | 'cancelled';
 }
 
 // Social types
 export interface FriendRequest {
   id: string;
-  senderId: string;
-  receiverId: string;
-  requestedAt: Timestamp;
-  status: 'pending' | 'accepted' | 'declined';
+  fromUserId: string;
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'denied';
+  createdAt: Timestamp;
+  respondedAt?: Timestamp;
 }
+
+export interface Friendship {
+  id: string;
+  user1Id: string;
+  user2Id: string;
+  createdAt: Timestamp;
+  user1ShareActivity: boolean;
+  user2ShareActivity: boolean;
+}
+
+export interface PublicUserData {
+    userId: string;
+    displayName: string;
+    friendId: string;
+}
+
 
 // Admin types
 export interface Program {
   id: string;
   name: string;
   description: string;
-  creatorId: string;
+  type: 'strength' | 'cardio' | 'hybrid' | 'flexibility' | 'other';
+  durationWeeks?: number;
+  exercises?: string[]; // Simple list for PoC
+  isActive: boolean;
+  createdBy: string;
   createdAt: Timestamp;
 }

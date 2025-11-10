@@ -1,31 +1,23 @@
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from './config';
-import type { Schedule, Booking } from '../../types';
+import type { Schedule, Booking } from '@/types';
 
-interface ScheduleService {
-  getSchedules: () => Promise<Schedule[]>;
-  bookSession: (booking: Booking) => Promise<void>;
-  cancelBooking: (bookingId: string) => Promise<void>;
-}
+const getSchedules = async (): Promise<Schedule[]> => {
+  const querySnapshot = await getDocs(collection(db, 'schedules'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schedule));
+};
 
-export const scheduleService: ScheduleService = {
-  getSchedules: async () => {
-    const schedulesCol = collection(db, 'schedules');
-    const scheduleSnapshot = await getDocs(schedulesCol);
-    const scheduleList = scheduleSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Schedule[];
-    return scheduleList;
-  },
+const bookSession = async (booking: Omit<Booking, 'id'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'bookings'), booking);
+  return docRef.id;
+};
 
-  bookSession: async (booking) => {
-    const bookingRef = doc(db, 'bookings', booking.id);
-    await setDoc(bookingRef, booking);
-  },
+const cancelBooking = async (bookingId: string): Promise<void> => {
+  await deleteDoc(doc(db, 'bookings', bookingId));
+};
 
-  cancelBooking: async (bookingId) => {
-    const bookingRef = doc(db, 'bookings', bookingId);
-    await deleteDoc(bookingRef);
-  },
+export const scheduleService = {
+  getSchedules,
+  bookSession,
+  cancelBooking,
 };
