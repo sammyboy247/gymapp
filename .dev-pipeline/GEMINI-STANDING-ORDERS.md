@@ -124,6 +124,24 @@ Test-Path "file.txt"; Start-Sleep -Seconds 1   # ✅ Safe
 
 ---
 
+### CONSTRAINT-006: Add Sleep to `git status`
+
+**RULE:** The `git status` command can cause instability. Always append a short sleep command to it.
+
+**Prohibited Pattern:**
+```powershell
+git status # ❌ May crash Gemini CLI
+```
+
+**Correct Pattern:**
+```powershell
+git status; Start-Sleep -Seconds 1 # ✅ Safe
+```
+
+**Why:** The `git status` command can sometimes execute too quickly, leading to the same instability as other instant commands.
+
+---
+
 ## 📋 Quick Reference Card
 
 **BEFORE running ANY command, check:**

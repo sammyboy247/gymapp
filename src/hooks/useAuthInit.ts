@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth'; // Added onAuthStateChanged and User
 import { authService } from '@/services/firebase/authService';
@@ -28,10 +29,9 @@ export const useAuthInit = () => {
 
           if (!userProfile) {
             // New user, create a default profile
-            const newProfile: UserProfile = {
-              id: firebaseUser.uid,
+            const newProfile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
               email: firebaseUser.email || '',
-              name: firebaseUser.displayName || 'New User',
+              displayName: firebaseUser.displayName || 'New User',
               friendId: `User${Math.floor(Math.random() * 9000) + 1000}`,
               role: 'member', // Default role
               shareActivity: false,
@@ -40,7 +40,12 @@ export const useAuthInit = () => {
               friendRequestsReceived: [],
             };
             await userService.createUserProfile(firebaseUser.uid, newProfile);
-            userProfile = newProfile;
+            userProfile = { 
+              ...newProfile, 
+              id: firebaseUser.uid, 
+              createdAt: Timestamp.now(), 
+              updatedAt: Timestamp.now() 
+            };
           }
           setUserProfile(userProfile);
         } catch (error) {
@@ -60,7 +65,7 @@ export const useAuthInit = () => {
     const signIn = async () => {
       if (typeof __initial_auth_token !== 'undefined' && auth.currentUser === null) {
         try {
-          await authService.signInWithCustomToken(__initial_auth_token);
+          await authService.signInWithToken(__initial_auth_token);
         } catch (error) {
           console.error('Error signing in with custom token:', error);
           // Fallback to anonymous sign-in if custom token fails

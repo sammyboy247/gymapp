@@ -9,7 +9,7 @@ export const UserProfileDetails: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4">My Details</h2>
-      <p><strong>Name:</strong> {userProfile.name}</p>
+      <p><strong>Name:</strong> {userProfile.displayName}</p>
       <p><strong>Email:</strong> {userProfile.email || 'Not provided'}</p>
       <p><strong>Role:</strong> {userProfile.role}</p>
       <p className="mt-4 p-3 bg-zinc-100 rounded">

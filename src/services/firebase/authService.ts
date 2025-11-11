@@ -1,7 +1,7 @@
+import type { User } from 'firebase/auth';
 import {
   signInWithCustomToken,
   signOut as firebaseSignOut,
-  User,
 } from 'firebase/auth';
 import { auth } from './config';
 

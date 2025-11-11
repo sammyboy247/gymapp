@@ -1,9 +1,13 @@
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
 import type { UserProfile } from '@/types';
 
-const createUserProfile = async (userId: string, profileData: Omit<UserProfile, 'id'>): Promise<void> => {
-  await setDoc(doc(db, 'users', userId), profileData);
+const createUserProfile = async (userId: string, profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
+  await setDoc(doc(db, 'users', userId), {
+    ...profileData,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 };
 
 const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -15,7 +19,10 @@ const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
 };
 
 const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<void> => {
-  await updateDoc(doc(db, 'users', userId), updates);
+  await updateDoc(doc(db, 'users', userId), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
 };
 
 const searchByFriendId = async (friendId: string): Promise<UserProfile | null> => {

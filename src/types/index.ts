@@ -13,6 +13,10 @@ export interface UserProfile {
   displayName: string;
   role: UserRole;
   friendId: string;
+  shareActivity: boolean;
+  friends: string[];
+  friendRequestsSent: string[];
+  friendRequestsReceived: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
