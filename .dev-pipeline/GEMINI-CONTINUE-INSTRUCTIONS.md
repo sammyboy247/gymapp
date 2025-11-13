@@ -132,3 +132,35 @@ If stuck or need clarification:
 2. Review GymApp.md for feature specifications
 3. Review MULTI-AGENT-WORKFLOW-SPECIFICATION.md for process
 4. Consult human developer for decisions
+
+---
+
+## Firebase Credentials Issue (from Jules)
+
+I've analyzed the code and found the source of the Firebase credentials issue. The file `src/services/firebase/config.ts` is correctly set up to use environment variables, but the `.env` file in the root of the project is empty.
+
+To fix this, you need to add your Firebase project's configuration to the `.env` file.
+
+Here are the steps:
+1.  Go to your Firebase project console: https://console.firebase.google.com/
+2.  In the project overview, click on the "Web" icon (</>) to see your web app's configuration.
+3.  Copy the `firebaseConfig` object.
+4.  Paste the values into the `.env` file in the root of the project, like this:
+
+```
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-auth-domain
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
+```
+
+Once you have updated the `.env` file, I will proceed with committing the changes from Jules.
+
+---
+
+## Rule for GEMINI-CONTINUE-INSTRUCTIONS.md
+
+**IMPORTANT:** Do not delete any lines from this file. Only append new instructions or updates.

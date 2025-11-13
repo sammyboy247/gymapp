@@ -35,9 +35,18 @@ const searchByFriendId = async (friendId: string): Promise<UserProfile | null> =
     return null;
 }
 
+import type { ProgramAssignment } from '@/types';
+
+const getUserPrograms = async (userId: string): Promise<ProgramAssignment[]> => {
+  const q = query(collection(db, 'programAssignments'), where('userId', '==', userId));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgramAssignment));
+};
+
 export const userService = {
   createUserProfile,
   getUserProfile,
   updateUserProfile,
   searchByFriendId,
+  getUserPrograms,
 };
