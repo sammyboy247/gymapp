@@ -1705,6 +1705,8 @@ _Pending execution_
 **Estimated Duration:** 60-75 minutes
 **Priority:** HIGH - Core social feature
 
+**NOTE FOR TOMORROW:** Re-issue this task to Jules. The previous attempt likely failed due to missing Firebase credentials. The credentials have now been added to `.env`. Jules should be made aware that this is a revisited task and that the majority of the work has already been done.
+
 **Description:**
 Implement the privacy-first friend system where users can only search by Friend ID, with double opt-in friend requests, and activity sharing preferences.
 
@@ -1842,6 +1844,8 @@ _Pending execution_
 **Estimated Duration:** 30-45 minutes
 **Priority:** MEDIUM - Social enhancement
 
+**NOTE FOR TOMORROW:** Re-issue this task to Jules. The previous attempt likely failed due to missing Firebase credentials. The credentials have now been added to `.env`. Jules should be made aware that this is a revisited task and that the majority of the work has already been done.
+
 **Description:**
 Add friend activity indicators to the schedule view, showing which sessions friends are booked into (only if both users have activity sharing enabled).
 
@@ -1916,6 +1920,8 @@ _Pending execution_
 **Dependencies:** TASK-038, TASK-039 (programs and friends exist)
 **Estimated Duration:** 30-45 minutes
 **Priority:** MEDIUM - User experience
+
+**NOTE FOR TOMORROW:** Re-issue this task to Jules. The previous attempt likely failed due to missing Firebase credentials. The credentials have now been added to `.env`. Jules should be made aware that this is a revisited task and that the majority of the work has already been done.
 
 **Description:**
 Enhance the user profile page to show assigned programs, activity sharing settings, and friend management integration.
