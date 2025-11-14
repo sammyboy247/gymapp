@@ -43,10 +43,25 @@ const getUserPrograms = async (userId: string): Promise<ProgramAssignment[]> => 
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgramAssignment));
 };
 
+const searchUsers = async (searchTerm: string): Promise<UserProfile[]> => {
+  // Note: Firestore doesn't support full-text search natively
+  // This is a simple implementation that fetches all users and filters in memory
+  // For production, consider using Algolia or similar service for better search
+  const querySnapshot = await getDocs(collection(db, 'users'));
+  const allUsers = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+
+  const lowerSearchTerm = searchTerm.toLowerCase();
+  return allUsers.filter(user =>
+    user.displayName?.toLowerCase().includes(lowerSearchTerm) ||
+    user.email?.toLowerCase().includes(lowerSearchTerm)
+  );
+};
+
 export const userService = {
   createUserProfile,
   getUserProfile,
   updateUserProfile,
   searchByFriendId,
   getUserPrograms,
+  searchUsers,
 };

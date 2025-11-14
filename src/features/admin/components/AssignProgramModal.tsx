@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Program, UserProfile, ProgramAssignment } from '@/types';
+import type { Program, UserProfile, ProgramAssignment } from '@/types';
 import { programService } from '@/services/firebase/programService';
 import { userService } from '@/services/firebase/userService';
+import { Timestamp } from 'firebase/firestore';
 
 const assignmentSchema = z.object({
   userId: z.string().min(1, 'Member is required'),
   programId: z.string().min(1, 'Program is required'),
-  startDate: z.date(),
+  startDate: z.string().min(1, 'Start date is required'),
   notes: z.string().optional(),
 });
 
@@ -23,7 +24,7 @@ export const AssignProgramModal: React.FC<Props> = ({ onClose, onAssign }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { handleSubmit, control, formState: { errors } } = useForm<ProgramAssignment>({
+  const { handleSubmit, control, formState: { errors } } = useForm({
     resolver: zodResolver(assignmentSchema),
   });
 
@@ -47,9 +48,13 @@ export const AssignProgramModal: React.FC<Props> = ({ onClose, onAssign }) => {
     fetchUsers();
   }, [searchTerm]);
 
-  const onSubmit = async (data: ProgramAssignment) => {
-    const newAssignmentId = await programService.assignProgram(data);
-    onAssign({ ...data, id: newAssignmentId });
+  const onSubmit = async (data: any) => {
+    const assignmentData = {
+      ...data,
+      startDate: Timestamp.fromDate(new Date(data.startDate)),
+    };
+    const newAssignmentId = await programService.assignProgram(assignmentData);
+    onAssign({ ...assignmentData, id: newAssignmentId });
     onClose();
   };
 
@@ -91,7 +96,7 @@ export const AssignProgramModal: React.FC<Props> = ({ onClose, onAssign }) => {
                 </select>
               )}
             />
-            {errors.userId && <p className="text-red-500 text-xs mt-1">{errors.userId.message}</p>}
+            {errors.userId && <p className="text-red-500 text-xs mt-1">{String(errors.userId.message)}</p>}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Select Program</label>
@@ -107,16 +112,23 @@ export const AssignProgramModal: React.FC<Props> = ({ onClose, onAssign }) => {
                 </select>
               )}
             />
-            {errors.programId && <p className="text-red-500 text-xs mt-1">{errors.programId.message}</p>}
+            {errors.programId && <p className="text-red-500 text-xs mt-1">{String(errors.programId.message)}</p>}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Start Date</label>
             <Controller
               name="startDate"
               control={control}
-              render={({ field }) => <input type="date" {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
+              render={({ field }) => (
+                <input
+                  type="date"
+                  {...field}
+                  value={field.value || ''}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                />
+              )}
             />
-            {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
+            {errors.startDate && <p className="text-red-500 text-xs mt-1">{String(errors.startDate.message)}</p>}
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Notes</label>

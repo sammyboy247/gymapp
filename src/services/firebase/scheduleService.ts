@@ -8,27 +8,37 @@ import {
   runTransaction,
   Timestamp,
   getDocs,
-  writeBatch,
+  orderBy,
 } from 'firebase/firestore';
 import { db } from './config';
 import type { Schedule, Booking } from '@/types';
 
-// Listener for schedule updates within a date range
+// Listener for schedule updates within a date range with optional session type filter
 const getSchedules = (
   startDate: Date,
   endDate: Date,
-  callback: (schedules: Schedule[]) => void
+  callback: (schedules: Schedule[]) => void,
+  sessionTypeFilter?: string | null
 ) => {
-  const q = query(
+  let q = query(
     collection(db, 'schedules'),
     where('startTime', '>=', Timestamp.fromDate(startDate)),
-    where('startTime', '<=', Timestamp.fromDate(endDate))
+    where('startTime', '<=', Timestamp.fromDate(endDate)),
+    orderBy('startTime', 'asc')
   );
 
+  // Note: Firestore doesn't allow multiple where clauses with orderBy on different fields
+  // If we need session type filtering, we'll filter in memory after retrieval
   return onSnapshot(q, querySnapshot => {
-    const schedules = querySnapshot.docs.map(
+    let schedules = querySnapshot.docs.map(
       doc => ({ id: doc.id, ...doc.data() } as Schedule)
     );
+
+    // Apply session type filter if provided
+    if (sessionTypeFilter) {
+      schedules = schedules.filter(s => s.sessionType === sessionTypeFilter);
+    }
+
     callback(schedules);
   });
 };
@@ -67,7 +77,7 @@ const bookSession = async (sessionId: string, userId: string, programId: string)
       where('status', '==', 'active')
     );
     const userBookingSnap = await getDocs(bookingsQuery);
-    if (!userBookingSnap.isEmpty) {
+    if (!userBookingSnap.empty) {
       throw new Error('You are already booked for this session.');
     }
     

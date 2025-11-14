@@ -10,7 +10,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from './config';
-import { Program, ProgramAssignment } from '@/types';
+import type { Program, ProgramAssignment } from '@/types';
 
 const programsCollection = collection(db, 'programs');
 const assignmentsCollection = collection(db, 'programAssignments');

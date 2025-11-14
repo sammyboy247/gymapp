@@ -11,7 +11,6 @@ export const ScheduleView: React.FC = () => {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [friendBookings, setFriendBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
   const [filter, setFilter] = useState({
     startDate: new Date(),
@@ -87,9 +86,8 @@ export const ScheduleView: React.FC = () => {
       </div>
 
       {loading && <LoadingSpinner />}
-      {error && <p className="text-red-500">{error}</p>}
-      
-      {!loading && !error && (
+
+      {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSchedules.map(session => (
             <div

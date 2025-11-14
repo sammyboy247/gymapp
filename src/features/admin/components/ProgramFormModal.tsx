@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Program } from '@/types';
+import type { Program } from '@/types';
 import { programService } from '@/services/firebase/programService';
 
 const programSchema = z.object({
@@ -129,7 +129,15 @@ export const ProgramFormModal: React.FC<Props> = ({
             <Controller
               name="isActive"
               control={control}
-              render={({ field }) => <input type="checkbox" {...field} checked={field.value} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />}
+              render={({ field: { value, onChange, ...field } }) => (
+                <input
+                  type="checkbox"
+                  {...field}
+                  checked={value}
+                  onChange={onChange}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                />
+              )}
             />
             <label className="ml-2 block text-sm text-gray-900">Active</label>
           </div>

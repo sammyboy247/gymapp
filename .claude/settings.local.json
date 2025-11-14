@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jules remote pull:*)",
+      "Bash(npm install:*)",
+      "Bash(jules remote list:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(jules remote --help:*)",
+      "Bash(jules_session_17192703439224119445.diff)",
+      "Bash(npm run build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

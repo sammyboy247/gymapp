@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Program, ProgramAssignment } from '@/types';
+import type { Program, ProgramAssignment } from '@/types';
 import { programService } from '@/services/firebase/programService';
 import { ProgramFormModal } from './ProgramFormModal';
 import { AssignProgramModal } from './AssignProgramModal';
