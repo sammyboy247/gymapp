@@ -1,18 +1,142 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 12, 6);
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    function isCoach() {
+      return isAuthenticated() && getUserData().role == 'coach';
+    }
+
+    function isAdminOrCoach() {
+      return isAdmin() || isCoach();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection - UserProfile documents
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isAuthenticated();
+
+      // Users can create their own profile
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can update their own profile, admins can update any
+      allow update: if isOwner(userId) || isAdmin();
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // Schedules collection - Schedule documents
+    match /schedules/{scheduleId} {
+      // Anyone authenticated can read schedules
+      allow read: if isAuthenticated();
+
+      // Only admins and coaches can create/update/delete schedules
+      allow create, update, delete: if isAdminOrCoach();
+    }
+
+    // Bookings collection - Booking documents
+    match /bookings/{bookingId} {
+      // Users can read their own bookings
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdminOrCoach()
+      );
+
+      // Users can create their own bookings
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+
+      // Users can update/delete their own bookings, admins can do any
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdminOrCoach()
+      );
+    }
+
+    // Programs collection - Program documents
+    match /programs/{programId} {
+      // Anyone authenticated can read programs
+      allow read: if isAuthenticated();
+
+      // Only admins and coaches can create/update/delete programs
+      allow create, update, delete: if isAdminOrCoach();
+    }
+
+    // Program Assignments collection - ProgramAssignment documents
+    match /programAssignments/{assignmentId} {
+      // Users can read their own assignments, admins/coaches can read all
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdminOrCoach()
+      );
+
+      // Only admins and coaches can create/update/delete assignments
+      allow create, update, delete: if isAdminOrCoach();
+    }
+
+    // Friend Requests collection - FriendRequest documents
+    match /friendRequests/{requestId} {
+      // Users can read requests involving them
+      allow read: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+
+      // Users can create friend requests from themselves
+      allow create: if isAuthenticated() && request.resource.data.fromUserId == request.auth.uid;
+
+      // Users can update requests sent to them (accepting/denying)
+      allow update: if isAuthenticated() && resource.data.toUserId == request.auth.uid;
+
+      // Users can delete their own sent requests
+      allow delete: if isAuthenticated() && resource.data.fromUserId == request.auth.uid;
+    }
+
+    // Friendships collection - Friendship documents
+    match /friendships/{friendshipId} {
+      // Users can read friendships they're part of
+      allow read: if isAuthenticated() && (
+        resource.data.user1Id == request.auth.uid ||
+        resource.data.user2Id == request.auth.uid
+      );
+
+      // System creates friendships (via Cloud Functions ideally)
+      // For now, users can create if they're one of the parties
+      allow create: if isAuthenticated() && (
+        request.resource.data.user1Id == request.auth.uid ||
+        request.resource.data.user2Id == request.auth.uid
+      );
+
+      // Users can update their own activity sharing preference
+      allow update: if isAuthenticated() && (
+        (resource.data.user1Id == request.auth.uid &&
+         request.resource.data.user1ShareActivity != resource.data.user1ShareActivity) ||
+        (resource.data.user2Id == request.auth.uid &&
+         request.resource.data.user2ShareActivity != resource.data.user2ShareActivity)
+      );
+
+      // Users can delete friendships they're part of
+      allow delete: if isAuthenticated() && (
+        resource.data.user1Id == request.auth.uid ||
+        resource.data.user2Id == request.auth.uid
+      );
     }
   }
 }

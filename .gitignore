@@ -25,3 +25,7 @@ dist-ssr
 
 # Gemini CLI temporary directories
 .dev-pipeline/.disregard/
+
+# Firebase service account keys (sensitive!)
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
