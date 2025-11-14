@@ -1487,7 +1487,7 @@ VERIFICATION:
 
 **Result:**
 **Jules Session:** 17192703439224119445 (Completed ~4 hours ago)
-**Status:** PARTIALLY INTEGRATED - Manual integration completed by Claude Code
+**Status:** REQUIRES_RE_RUN - Previous session partially integrated by Claude Code. Needs full re-run.
 
 **Notes:**
 - Jules session completed successfully but `--apply` failed due to local code divergence
@@ -1594,7 +1594,7 @@ VERIFICATION:
 
 **Result:**
 **Jules Session:** 1813635457888636822 (Completed ~4 hours ago)
-**Status:** PARTIALLY INTEGRATED - Manual integration completed by Claude Code
+**Status:** REQUIRES_RE_RUN - Previous session partially integrated by Claude Code. Needs full re-run.
 
 **Notes:**
 - Jules session completed successfully but `--apply` failed due to local code divergence
@@ -1723,7 +1723,7 @@ VERIFICATION:
 
 **Result:**
 **Jules Session:** 4612389176397979767 (Completed ~4 hours ago)
-**Status:** PARTIALLY INTEGRATED - Manual integration completed by Claude Code
+**Status:** REQUIRES_RE_RUN - Previous session partially integrated by Claude Code. Needs full re-run.
 
 **Notes:**
 - Jules session completed successfully but `--apply` failed due to local code divergence
@@ -1738,7 +1738,7 @@ VERIFICATION:
 - Build status: ✅ PASSING
 - Integrated in commit: c1de949
 
-**Recommendation:** Verify completeness of program management UI components. All base components exist, but may need testing with live Firebase data to confirm full functionality.
+**Recommendation:** Verify completeness of program management UI components. All base components exist, but may need testing with live Firebase data to confirm full functionality. If UI components are incomplete, re-run Jules with a specific prompt to complete them.
 
 ---
 

@@ -1,7 +1,7 @@
 # Gemini CLI - Standing Orders & Constraints
 
-**Document Version:** 1.1
-**Last Updated:** 2025-11-06
+**Document Version:** 1.2
+**Last Updated:** 2025-11-14
 **Purpose:** Critical rules that Gemini MUST follow at all times
 
 ---
@@ -142,6 +142,73 @@ git status; Start-Sleep -Seconds 1 # ✅ Safe
 
 ---
 
+### CONSTRAINT-007: Always Check for Existing Jules Sessions Before Starting New Work
+
+**RULE:** Before initiating ANY new Jules session, Gemini MUST check for existing completed sessions that may already contain the work.
+
+**MANDATORY PRE-FLIGHT CHECKLIST:**
+```powershell
+# 1. List all Jules sessions for this repo
+jules remote list --session
+
+# 2. Identify recently completed sessions (last 24-48 hours)
+# Look for "Completed" status
+
+# 3. For each completed session, check what it contains
+jules remote pull --session [SESSION_ID] 2>&1 | head -20
+
+# 4. Check what files were created/modified
+jules remote pull --session [SESSION_ID] 2>&1 | Select-String "^diff --git"
+
+# 5. ONLY start new Jules session if work is truly new
+```
+
+**Why This Constraint Exists:**
+
+On 2025-11-14, a costly mistake was made:
+- TASK-036, TASK-037, and TASK-038 were completed by Jules 8-19 hours prior
+- Completed work was sitting in Jules sessions waiting to be pulled
+- A NEW Jules session was initiated for TASK-036 **without checking** existing sessions
+- Result: Duplicate work, wasted 60-90 minutes of cloud VM time, potential merge conflicts
+
+**Red Flags That Work May Already Exist:**
+- ✅ Required dependencies are already installed
+- ✅ Some related files exist but are functional (not just placeholders)
+- ✅ Build is passing but features seem incomplete
+- ✅ Multiple related Jules sessions show "Completed" status recently
+- ✅ Tasklist shows recent Jules session IDs in notes
+
+**Decision Tree:**
+
+```
+About to start Jules work for TASK-XXX?
+│
+├─ Run: jules remote list --session
+│
+├─ See completed session from last 48 hours?
+│  ├─ YES → Check what it contains
+│  │        └─ Contains your work? → PULL IT, don't start new session
+│  │        └─ Different work? → OK to start new session
+│  │
+│  └─ NO → Check local files
+│           └─ Placeholder files only? → OK to start new session
+│           └─ Functional files exist? → Investigation needed, may already be done
+```
+
+**Correct Recovery if Duplicate Started:**
+1. Check if Jules session can be cancelled (while in "Planning" state)
+2. Pull all completed sessions that contain the work
+3. Document the mistake in GEMINI-CONTINUE-INSTRUCTIONS.md
+4. Update tasklist.md with actual status
+
+**Exception:**
+If intentionally re-running a task due to bugs or missing requirements, document WHY in the Jules session description:
+```bash
+jules remote new --repo . --session "RETRY TASK-036: Previous session 123456 missing BookingModal component. Re-implementing with complete spec..."
+```
+
+---
+
 ## 📋 Quick Reference Card
 
 **BEFORE running ANY command, check:**
@@ -150,6 +217,12 @@ git status; Start-Sleep -Seconds 1 # ✅ Safe
 - [ ] Does this command execute instantly (echo, Write-Output, etc.)? ⏱️ Add 1-2 second sleep
 - [ ] Am I checking Jules too frequently? ⏱️ Wait 5 minutes
 - [ ] Have I updated the task file? 📝 Update immediately after action
+
+**BEFORE starting NEW Jules session, check:**
+- [ ] Have I listed existing Jules sessions? 🔍 `jules remote list --session`
+- [ ] Are there completed sessions from last 48 hours? ⏰ Check timestamps
+- [ ] Have I checked what those sessions contain? 📄 `jules remote pull --session [ID]`
+- [ ] Is the work I'm about to start already done? ⚠️ Pull instead of recreate
 
 ---
 
@@ -169,7 +242,13 @@ If a command is running and you realize it won't exit:
 This document should be updated whenever new constraints are discovered through experience.
 
 **Version History:**
-- v1.1 (2025-11-06): 
+- v1.2 (2025-11-14):
+  - Added CONSTRAINT-007: Check for existing Jules sessions before starting new work
+  - Documented real-world incident where duplicate Jules session was initiated
+  - Added pre-flight checklist for Jules session creation
+  - Expanded Quick Reference Card with Jules session verification steps
+  - Impact: Prevents wasted cloud VM time and duplicate work
+- v1.1 (2025-11-06):
   - Corrected Jules commands (jules remote list instead of jules remote status)
   - Added CONSTRAINT-004 for instant commands requiring wait times
   - Updated Quick Reference Card

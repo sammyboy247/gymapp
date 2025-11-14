@@ -548,6 +548,65 @@ const handleBooking = async () => {
 4. Look for console errors in browser
 5. Verify environment variables are set
 
+**Problem:** 🚨 **CRITICAL - Initiating duplicate Jules sessions for already-completed work**
+
+**What Happened (Real Example from 2025-11-14):**
+- Tasks 036, 037, 038 were completed by Jules 8-19 hours prior
+- Work was sitting in completed Jules sessions waiting to be pulled
+- New Jules session was initiated for TASK-036 **without checking** existing sessions
+- Result: Duplicate work, wasted time, potential merge conflicts
+
+**Root Cause:**
+- Did not check `jules remote list --session` before starting new work
+- Assumed tasks needed to be done without verifying completion status
+- Local codebase had some files but not all (partial integration confusion)
+
+**Prevention - ALWAYS CHECK BEFORE STARTING NEW JULES WORK:**
+
+```bash
+# 1. MANDATORY: List all Jules sessions for this repo
+jules remote list --session | grep "sammyboy247/gymapp"
+
+# 2. Check for recently completed sessions (last 24 hours)
+jules remote list --session | grep -E "(Completed|Planning|Running)" | head -10
+
+# 3. For each COMPLETED session, check what task it was
+jules remote pull --session [SESSION_ID] 2>&1 | head -20
+
+# 4. Check what files the session created
+jules remote pull --session [SESSION_ID] 2>&1 | grep "^diff --git"
+
+# 5. ONLY THEN initiate new work if truly needed
+```
+
+**When to Pull Instead of Re-initiate:**
+- Session shows "Completed" status
+- Session was created within last 24-48 hours
+- Task description matches your current task
+- Files from session don't exist locally or are placeholders
+
+**Red Flags That Work May Already Be Done:**
+- ✅ Dependencies are already installed (e.g., react-big-calendar for admin schedule)
+- ✅ Some files exist locally (e.g., ProgramManager.tsx) but are functional
+- ✅ Related Jules sessions completed recently
+- ✅ Build is passing but features seem incomplete
+
+**Correct Recovery Process:**
+1. Stop/cancel any duplicate sessions if possible
+2. Pull all completed sessions: `jules remote pull --session [ID] --apply`
+3. If apply fails, manually integrate: `jules remote pull --session [ID] > session.diff`
+4. Review what's missing vs what's in Jules sessions
+5. Only create NEW Jules session if significant work remains
+
+**Impact of This Mistake:**
+- ⏱️ Wasted 60-90 minutes of Jules cloud VM time
+- 💰 Unnecessary compute costs
+- 🔀 Potential merge conflicts between duplicate implementations
+- ⏳ Delayed project progress
+- 😵 Confusion about which implementation is correct
+
+**This is now documented as CONSTRAINT-007 in GEMINI-STANDING-ORDERS.md**
+
 #### 8. Task Dependencies & Sequencing
 
 **Document dependencies clearly:**
