@@ -1744,7 +1744,7 @@ VERIFICATION:
 
 ### TASK-039: Implement Privacy-First Friend System
 **Agent:** Jules
-**Status:** PENDING
+**Status:** READY_FOR_JULES
 **Dependencies:** Phase 2 (userService exists)
 **Estimated Duration:** 60-75 minutes
 **Priority:** HIGH - Core social feature
@@ -1883,7 +1883,7 @@ _Pending execution_
 
 ### TASK-040: Implement Friend Activity in Schedule View
 **Agent:** Jules
-**Status:** PENDING
+**Status:** READY_FOR_JULES
 **Dependencies:** TASK-036, TASK-039 (schedule and friends implemented)
 **Estimated Duration:** 30-45 minutes
 **Priority:** MEDIUM - Social enhancement
@@ -1960,7 +1960,7 @@ _Pending execution_
 
 ### TASK-041: Enhance User Profile with Programs & Settings
 **Agent:** Jules
-**Status:** PENDING
+**Status:** READY_FOR_JULES
 **Dependencies:** TASK-038, TASK-039 (programs and friends exist)
 **Estimated Duration:** 30-45 minutes
 **Priority:** MEDIUM - User experience

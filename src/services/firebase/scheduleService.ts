@@ -9,9 +9,13 @@ import {
   Timestamp,
   getDocs,
   orderBy,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './config';
-import type { Schedule, Booking } from '@/types';
+import type { Schedule, Booking, UserProfile } from '@/types';
 
 // Listener for schedule updates within a date range with optional session type filter
 const getSchedules = (
@@ -176,7 +180,140 @@ const getFriendBookings = (friendIds: string[], callback: (bookings: Booking[]) 
   });
 };
 
+// ADMIN FUNCTIONS
+
+// Create a new schedule session
+const createSchedule = async (scheduleData: Omit<Schedule, 'id'>): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'schedules'), scheduleData);
+  return docRef.id;
+};
+
+// Update an existing schedule session
+const updateSchedule = async (sessionId: string, updates: Partial<Schedule>): Promise<void> => {
+  const scheduleRef = doc(db, 'schedules', sessionId);
+  await updateDoc(scheduleRef, updates);
+};
+
+// Delete a schedule session
+const deleteSchedule = async (sessionId: string): Promise<void> => {
+  // Note: UI should check for active bookings before calling this.
+  const scheduleRef = doc(db, 'schedules', sessionId);
+  await deleteDoc(scheduleRef);
+};
+
+// Bulk delete multiple schedules
+const bulkDeleteSchedules = async (sessionIds: string[]): Promise<void> => {
+  const batch = writeBatch(db);
+  sessionIds.forEach(id => {
+    const scheduleRef = doc(db, 'schedules', id);
+    batch.delete(scheduleRef);
+  });
+  await batch.commit();
+};
+
+// Extended booking type with member details for roster display
+interface RosterItem extends Booking {
+  memberDisplayName: string;
+  memberEmail: string;
+}
+
+// Get session roster with member details
+const getSessionRoster = async (sessionId: string): Promise<RosterItem[]> => {
+  const bookingsQuery = query(
+    collection(db, 'bookings'),
+    where('sessionId', '==', sessionId),
+    where('status', '==', 'active')
+  );
+  const bookingSnapshot = await getDocs(bookingsQuery);
+  const bookings = bookingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+
+  if (bookings.length === 0) {
+    return [];
+  }
+
+  const userIds = [...new Set(bookings.map(b => b.userId))];
+
+  // Firestore 'in' query is limited to 10 items. For a larger roster, fetch users one by one.
+  // This is a PoC, so we assume rosters are small.
+  const usersQuery = query(collection(db, 'users'), where('id', 'in', userIds));
+  const userSnapshot = await getDocs(usersQuery);
+  const users = userSnapshot.docs.map(doc => doc.data() as UserProfile);
+  const userMap = new Map(users.map(u => [u.id, u]));
+
+  return bookings.map(booking => {
+    const user = userMap.get(booking.userId);
+    return {
+      ...booking,
+      memberDisplayName: user?.displayName || 'Unknown',
+      memberEmail: user?.email || 'Unknown',
+    };
+  });
+};
+
+// Admin: Add a member to a session
+const adminAddBooking = async (sessionId: string, userId: string, programId: string): Promise<string> => {
+  const scheduleRef = doc(db, 'schedules', sessionId);
+  const bookingsColRef = collection(db, 'bookings');
+
+  let bookingId = '';
+
+  await runTransaction(db, async (transaction) => {
+    const scheduleDoc = await transaction.get(scheduleRef);
+    if (!scheduleDoc.exists()) {
+      throw new Error("Session not found!");
+    }
+
+    const scheduleData = scheduleDoc.data() as Schedule;
+    if (scheduleData.spotsRemaining <= 0) {
+      throw new Error("Session is full!");
+    }
+
+    // Decrement spots
+    transaction.update(scheduleRef, { spotsRemaining: scheduleData.spotsRemaining - 1 });
+
+    // Create booking
+    const newBooking: Omit<Booking, 'id'> = {
+      userId,
+      sessionId,
+      programId,
+      bookedAt: Timestamp.now(),
+      status: 'active',
+    };
+    const newBookingRef = doc(bookingsColRef);
+    transaction.set(newBookingRef, newBooking);
+    bookingId = newBookingRef.id;
+  });
+
+  return bookingId;
+};
+
+// Admin: Remove a member from a session
+const adminRemoveBooking = async (bookingId: string): Promise<void> => {
+  const bookingRef = doc(db, 'bookings', bookingId);
+
+  await runTransaction(db, async (transaction) => {
+    const bookingDoc = await transaction.get(bookingRef);
+    if (!bookingDoc.exists()) {
+      throw new Error("Booking not found!");
+    }
+
+    const bookingData = bookingDoc.data() as Booking;
+    const scheduleRef = doc(db, 'schedules', bookingData.sessionId);
+
+    const scheduleDoc = await transaction.get(scheduleRef);
+    if (scheduleDoc.exists()) {
+       const scheduleData = scheduleDoc.data() as Schedule;
+       // Increment spots
+       transaction.update(scheduleRef, { spotsRemaining: scheduleData.spotsRemaining + 1 });
+    }
+
+    // Delete booking
+    transaction.delete(bookingRef);
+  });
+};
+
 export const scheduleService = {
+  // User-facing functions
   getSchedules,
   getSessionById,
   bookSession,
@@ -185,4 +322,12 @@ export const scheduleService = {
   checkSessionCapacity,
   getSessionBookings,
   getFriendBookings,
+  // Admin functions
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  bulkDeleteSchedules,
+  getSessionRoster,
+  adminAddBooking,
+  adminRemoveBooking,
 };
