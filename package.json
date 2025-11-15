@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "seed": "ts-node scripts/seedFirestore.ts",
+    "seed:demo": "ts-node scripts/seedData.ts",
+    "seed:demo:clear": "ts-node scripts/seedData.ts --clear",
     "seed:emulator": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 ts-node scripts/seedFirestore.ts"
   },
   "devDependencies": {
