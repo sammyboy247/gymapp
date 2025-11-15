@@ -57,6 +57,19 @@ const searchUsers = async (searchTerm: string): Promise<UserProfile[]> => {
   );
 };
 
+const updateActivitySharing = async (userId: string, shareActivity: boolean): Promise<void> => {
+  await updateUserProfile(userId, { shareActivity });
+};
+
+const updateDisplayName = async (userId: string, displayName: string): Promise<void> => {
+  await updateUserProfile(userId, { displayName });
+};
+
+const getAllUsers = async (): Promise<UserProfile[]> => {
+  const querySnapshot = await getDocs(collection(db, 'users'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+};
+
 export const userService = {
   createUserProfile,
   getUserProfile,
@@ -64,4 +77,7 @@ export const userService = {
   searchByFriendId,
   getUserPrograms,
   searchUsers,
+  updateActivitySharing,
+  updateDisplayName,
+  getAllUsers,
 };

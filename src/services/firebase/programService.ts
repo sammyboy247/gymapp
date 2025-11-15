@@ -4,6 +4,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   doc,
   serverTimestamp,
   query,
@@ -36,14 +37,18 @@ export const programService = {
 
   getPrograms: async (): Promise<Program[]> => {
     const snapshot = await getDocs(programsCollection);
-    return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Program)
-    );
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Program));
   },
 
-  assignProgram: async (
-    assignmentData: Omit<ProgramAssignment, 'id' | 'assignedAt'>
-  ) => {
+  getProgram: async (programId: string): Promise<Program | null> => {
+    const programDoc = await getDoc(doc(db, 'programs', programId));
+    if (programDoc.exists()) {
+      return { id: programDoc.id, ...programDoc.data() } as Program;
+    }
+    return null;
+  },
+
+  assignProgram: async (assignmentData: Omit<ProgramAssignment, 'id' | 'assignedAt'>) => {
     const docRef = await addDoc(assignmentsCollection, {
       ...assignmentData,
       assignedAt: serverTimestamp(),
@@ -51,13 +56,9 @@ export const programService = {
     return docRef.id;
   },
 
-  getProgramAssignments: async (
-    programId: string
-  ): Promise<ProgramAssignment[]> => {
+  getProgramAssignments: async (programId: string): Promise<ProgramAssignment[]> => {
     const q = query(assignmentsCollection, where('programId', '==', programId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as ProgramAssignment)
-    );
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ProgramAssignment));
   },
 };
