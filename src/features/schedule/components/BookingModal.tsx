@@ -58,12 +58,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
   const isBooked = userBookings.some(b => b.sessionId === session.id);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">{session.sessionType}</h2>
-        <p>{new Date(session.startTime.seconds * 1000).toLocaleString()}</p>
-        <p>Coach: {session.coachName}</p>
-        <p>Spots Remaining: {session.spotsRemaining}</p>
+        <p className="text-gray-700">{session.startTime.toDate().toLocaleString()}</p>
+        <p className="text-gray-700">Coach: {session.coachName}</p>
+        <p className="text-gray-700">Spots Remaining: {session.spotsRemaining} / {session.capacity}</p>
+        {session.location && <p className="text-gray-700">Location: {session.location}</p>}
+        {session.description && <p className="text-gray-600 mt-2 text-sm">{session.description}</p>}
 
         {!isBooked && (
           <div className="mt-4">
@@ -96,7 +98,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
             <button
               onClick={handleBooking}
               disabled={loading || session.spotsRemaining <= 0}
-              className="py-2 px-4 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
+              className="py-2 px-4 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center"
             >
               {loading ? <LoadingSpinner /> : 'Book Session'}
             </button>
@@ -104,7 +106,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
             <button
               onClick={handleCancelBooking}
               disabled={loading}
-              className="py-2 px-4 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300"
+              className="py-2 px-4 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300 flex items-center justify-center"
             >
               {loading ? <LoadingSpinner /> : 'Cancel Booking'}
             </button>

@@ -1,0 +1,537 @@
+diff --git a/src/components/LoadingSpinner.tsx b/src/components/LoadingSpinner.tsx
+new file mode 100644
+index 0000000..b86b837
+--- /dev/null
++++ b/src/components/LoadingSpinner.tsx
+@@ -0,0 +1,24 @@
++import React from 'react';
++
++export const LoadingSpinner: React.FC = () => (
++  <svg
++    className="animate-spin h-5 w-5 text-white"
++    xmlns="http://www.w3.org/2000/svg"
++    fill="none"
++    viewBox="0 0 24 24"
++  >
++    <circle
++      className="opacity-25"
++      cx="12"
++      cy="12"
++      r="10"
++      stroke="currentColor"
++      strokeWidth="4"
++    ></circle>
++    <path
++      className="opacity-75"
++      fill="currentColor"
++      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
++    ></path>
++  </svg>
++);
+\ No newline at end of file
+diff --git a/src/features/schedule/components/BookingModal.tsx b/src/features/schedule/components/BookingModal.tsx
+index 6c6c3d9..ac423e0 100644
+--- a/src/features/schedule/components/BookingModal.tsx
++++ b/src/features/schedule/components/BookingModal.tsx
+@@ -1,20 +1,116 @@
+-import React from 'react';
+-// This component will be triggered from ScheduleView
+-// It will show session details and the Program Selection dropdown (PoC Spec 2.3.2)
+-export const BookingModal: React.FC = () => {
+-  // TODO:
+-  // 1. Receive 'session' prop
+-  // 2. Fetch user's assigned programs
+-  // 3. Display a <select> with options:
+-  //    - "Generic Program"
+-  //    - User's assigned programs
+-  // 4. On "Book" button click, create a new document in
+-  //    /artifacts/{appId}/users/{userId}/bookings/
+-  //    and store the 'selectedProgramId'
+-    
++import React, { useState, useEffect } from 'react';
++import { scheduleService } from '@/services/firebase/scheduleService';
++import { userService } from '@/services/firebase/userService';
++import type { Schedule, Booking, ProgramAssignment } from '@/types';
++import { useAuthStore } from '@/store/authStore';
++import { LoadingSpinner } from '@/components/LoadingSpinner';
++
++interface BookingModalProps {
++  session: Schedule;
++  userBookings: Booking[];
++  onClose: () => void;
++}
++
++export const BookingModal: React.FC<BookingModalProps> = ({ session, userBookings, onClose }) => {
++  const { user } = useAuthStore();
++  const [selectedProgramId, setSelectedProgramId] = useState<string>(session.defaultProgramId || 'default');
++  const [userPrograms, setUserPrograms] = useState<ProgramAssignment[]>([]);
++  const [loading, setLoading] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++
++  useEffect(() => {
++    if (user) {
++      userService.getUserPrograms(user.uid).then(setUserPrograms);
++    }
++  }, [user]);
++
++  const handleBooking = async () => {
++    if (!user) return;
++    setLoading(true);
++    setError(null);
++    try {
++      await scheduleService.bookSession(session.id, user.uid, selectedProgramId);
++      onClose();
++    } catch (err: any) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  const handleCancelBooking = async () => {
++    if (!user) return;
++    setLoading(true);
++    setError(null);
++    try {
++      const booking = userBookings.find(b => b.sessionId === session.id);
++      if (booking) {
++        await scheduleService.cancelBooking(booking.id, session.id, user.uid);
++      }
++      onClose();
++    } catch (err: any) {
++      setError(err.message);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  const isBooked = userBookings.some(b => b.sessionId === session.id);
++
+   return (
+-    <div>
+-      {/* Modal placeholder */}
++    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
++      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
++        <h2 className="text-2xl font-bold mb-4">{session.sessionType}</h2>
++        <p>{new Date(session.startTime.seconds * 1000).toLocaleString()}</p>
++        <p>Coach: {session.coachName}</p>
++        <p>Spots Remaining: {session.spotsRemaining}</p>
++
++        {!isBooked && (
++          <div className="mt-4">
++            <label htmlFor="program-select" className="block mb-2 font-semibold">
++              Select Program:
++            </label>
++            <select
++              id="program-select"
++              value={selectedProgramId}
++              onChange={e => setSelectedProgramId(e.target.value)}
++              className="w-full p-2 border rounded"
++            >
++              <option value="default">Default Program</option>
++              {userPrograms.map(p => (
++                <option key={p.id} value={p.programId}>
++                  {p.programId}
++                </option>
++              ))}
++            </select>
++          </div>
++        )}
++
++        {error && <p className="text-red-500 mt-4">{error}</p>}
++
++        <div className="mt-6 flex justify-end gap-4">
++          <button onClick={onClose} className="py-2 px-4 rounded bg-zinc-200 hover:bg-zinc-300">
++            Close
++          </button>
++          {!isBooked ? (
++            <button
++              onClick={handleBooking}
++              disabled={loading || session.spotsRemaining <= 0}
++              className="py-2 px-4 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
++            >
++              {loading ? <LoadingSpinner /> : 'Book Session'}
++            </button>
++          ) : (
++            <button
++              onClick={handleCancelBooking}
++              disabled={loading}
++              className="py-2 px-4 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300"
++            >
++              {loading ? <LoadingSpinner /> : 'Cancel Booking'}
++            </button>
++          )}
++        </div>
++      </div>
+     </div>
+   );
+ };
+\ No newline at end of file
+diff --git a/src/features/schedule/components/ScheduleView.tsx b/src/features/schedule/components/ScheduleView.tsx
+index 7bb20a7..658d968 100644
+--- a/src/features/schedule/components/ScheduleView.tsx
++++ b/src/features/schedule/components/ScheduleView.tsx
+@@ -1,21 +1,132 @@
+-import React from 'react';
+-// This component will fetch and display GymSession data from Firestore
+-// It will also show friends' bookings (PoC Spec 2.3.2)
++import React, { useState, useEffect } from 'react';
++import { scheduleService } from '@/services/firebase/scheduleService';
++import type { Schedule, Booking } from '@/types';
++import { useAuthStore } from '@/store/authStore';
++import { BookingModal } from './BookingModal';
++import { LoadingSpinner } from '@/components/LoadingSpinner';
++
+ export const ScheduleView: React.FC = () => {
+-  // TODO:
+-  // 1. Fetch all GymSession items from Firestore collection
+-  //    (e.g., /artifacts/{appId}/public/data/sessions)
+-  // 2. Fetch user's bookings
+-  // 3. Fetch friends' bookings
+-  // 4. Render a calendar/list view
++  const { user, userProfile } = useAuthStore();
++  const [schedules, setSchedules] = useState<Schedule[]>([]);
++  const [userBookings, setUserBookings] = useState<Booking[]>([]);
++  const [friendBookings, setFriendBookings] = useState<Booking[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++  const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
++  const [filter, setFilter] = useState({
++    startDate: new Date(),
++    endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
++    sessionType: 'all',
++  });
++
++  const userId = user?.uid;
++
++  useEffect(() => {
++    setLoading(true);
++    const unsubscribeSchedules = scheduleService.getSchedules(
++      filter.startDate,
++      filter.endDate,
++      (newSchedules) => {
++        setSchedules(newSchedules);
++        setLoading(false);
++      }
++    );
++
++    if (userId) {
++      const unsubscribeBookings = scheduleService.getUserBookings(userId, setUserBookings);
++      const unsubscribeFriendBookings = scheduleService.getFriendBookings(userProfile?.friends || [], setFriendBookings);
++      return () => {
++        unsubscribeSchedules();
++        unsubscribeBookings();
++        unsubscribeFriendBookings();
++      };
++    }
++
++    return () => {
++      unsubscribeSchedules();
++    };
++  }, [filter.startDate, filter.endDate, userId]);
++
++  const handleSessionClick = (session: Schedule) => {
++    if (session.spotsRemaining > 0 && !isUserBooked(session.id)) {
++      setSelectedSession(session);
++    }
++  };
++
++  const isUserBooked = (sessionId: string) => {
++    return userBookings.some(booking => booking.sessionId === sessionId);
++  };
++
++  const filteredSchedules = schedules.filter(
++    schedule => filter.sessionType === 'all' || schedule.sessionType === filter.sessionType
++  );
+ 
+   return (
+     <div className="bg-white p-6 rounded-lg shadow-md">
+       <h2 className="text-2xl font-semibold mb-4">Upcoming Classes</h2>
+-      <div className="border border-zinc-200 rounded-lg p-4 min-h-[200px] flex items-center justify-center">
+-        <p className="text-zinc-500">[Schedule calendar/list placeholder]</p>
++
++      {/* Filter Controls */}
++      <div className="flex gap-4 mb-4">
++        <div>
++          <label htmlFor="sessionType" className="block text-sm font-medium text-gray-700">
++            Session Type
++          </label>
++          <select
++            id="sessionType"
++            name="sessionType"
++            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
++            value={filter.sessionType}
++            onChange={e => setFilter({ ...filter, sessionType: e.target.value })}
++          >
++            <option value="all">All</option>
++            <option value="strength">Strength</option>
++            <option value="cardio">Cardio</option>
++            <option value="yoga">Yoga</option>
++          </select>
++        </div>
+       </div>
+-      {/* Clicking a session should open BookingModal.tsx */}
++
++      {loading && <LoadingSpinner />}
++      {error && <p className="text-red-500">{error}</p>}
++      
++      {!loading && !error && (
++        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
++          {filteredSchedules.map(session => (
++            <div
++              key={session.id}
++              onClick={() => handleSessionClick(session)}
++              className={`p-4 border rounded-lg ${
++                isUserBooked(session.id)
++                  ? 'bg-blue-100 border-blue-500'
++                  : session.spotsRemaining > 0
++                  ? 'cursor-pointer hover:bg-zinc-100'
++                  : 'bg-zinc-200 text-zinc-500'
++              }`}
++            >
++              <h3 className="font-bold">{session.sessionType}</h3>
++              <p>{new Date(session.startTime.seconds * 1000).toLocaleString()}</p>
++              <p>Coach: {session.coachName}</p>
++              <p>
++                Spots: {session.spotsRemaining} / {session.capacity}
++              </p>
++              {isUserBooked(session.id) && (
++                <p className="text-blue-600 font-semibold mt-2">Booked</p>
++              )}
++              {friendBookings.some(b => b.sessionId === session.id) && (
++                <p className="text-green-600 font-semibold mt-2">Friend is going</p>
++              )}
++            </div>
++          ))}
++        </div>
++      )}
++
++      {selectedSession && (
++        <BookingModal
++          session={selectedSession}
++          onClose={() => setSelectedSession(null)}
++          userBookings={userBookings}
++        />
++      )}
+     </div>
+   );
+ };
+\ No newline at end of file
+diff --git a/src/services/firebase/scheduleService.ts b/src/services/firebase/scheduleService.ts
+index 42fa18f..1117829 100644
+--- a/src/services/firebase/scheduleService.ts
++++ b/src/services/firebase/scheduleService.ts
+@@ -1,23 +1,178 @@
+-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
++import {
++  collection,
++  query,
++  where,
++  onSnapshot,
++  doc,
++  getDoc,
++  runTransaction,
++  Timestamp,
++  getDocs,
++  writeBatch,
++} from 'firebase/firestore';
+ import { db } from './config';
+ import type { Schedule, Booking } from '@/types';
+ 
+-const getSchedules = async (): Promise<Schedule[]> => {
+-  const querySnapshot = await getDocs(collection(db, 'schedules'));
+-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schedule));
++// Listener for schedule updates within a date range
++const getSchedules = (
++  startDate: Date,
++  endDate: Date,
++  callback: (schedules: Schedule[]) => void
++) => {
++  const q = query(
++    collection(db, 'schedules'),
++    where('startTime', '>=', Timestamp.fromDate(startDate)),
++    where('startTime', '<=', Timestamp.fromDate(endDate))
++  );
++
++  return onSnapshot(q, querySnapshot => {
++    const schedules = querySnapshot.docs.map(
++      doc => ({ id: doc.id, ...doc.data() } as Schedule)
++    );
++    callback(schedules);
++  });
++};
++
++// Get a single session by ID
++const getSessionById = async (sessionId: string): Promise<Schedule | null> => {
++  const docRef = doc(db, 'schedules', sessionId);
++  const docSnap = await getDoc(docRef);
++  if (docSnap.exists()) {
++    return { id: docSnap.id, ...docSnap.data() } as Schedule;
++  }
++  return null;
++};
++
++// Book a session for a user
++const bookSession = async (sessionId: string, userId: string, programId: string): Promise<string> => {
++  const sessionRef = doc(db, 'schedules', sessionId);
++  const bookingRef = doc(collection(db, 'bookings'));
++
++  await runTransaction(db, async (transaction) => {
++    const sessionDoc = await transaction.get(sessionRef);
++    if (!sessionDoc.exists()) {
++      throw new Error('Session does not exist!');
++    }
++
++    const session = sessionDoc.data() as Schedule;
++    if (session.spotsRemaining <= 0) {
++      throw new Error('This session is full!');
++    }
++
++    // Check for double booking
++    const bookingsQuery = query(
++      collection(db, 'bookings'),
++      where('userId', '==', userId),
++      where('sessionId', '==', sessionId),
++      where('status', '==', 'active')
++    );
++    const userBookingSnap = await getDocs(bookingsQuery);
++    if (!userBookingSnap.isEmpty) {
++      throw new Error('You are already booked for this session.');
++    }
++    
++    transaction.update(sessionRef, {
++      spotsRemaining: session.spotsRemaining - 1,
++    });
++
++    transaction.set(bookingRef, {
++      id: bookingRef.id,
++      userId,
++      sessionId,
++      programId,
++      bookedAt: Timestamp.now(),
++      status: 'active',
++    });
++  });
++
++  return bookingRef.id;
+ };
+ 
+-const bookSession = async (booking: Omit<Booking, 'id'>): Promise<string> => {
+-  const docRef = await addDoc(collection(db, 'bookings'), booking);
+-  return docRef.id;
++// Cancel a booking
++const cancelBooking = async (bookingId: string, sessionId: string, userId: string): Promise<void> => {
++  const bookingRef = doc(db, 'bookings', bookingId);
++  const sessionRef = doc(db, 'schedules', sessionId);
++
++  await runTransaction(db, async (transaction) => {
++    const bookingDoc = await transaction.get(bookingRef);
++    if (!bookingDoc.exists() || bookingDoc.data().userId !== userId) {
++      throw new Error('Booking not found or you do not have permission to cancel it.');
++    }
++
++    const sessionDoc = await transaction.get(sessionRef);
++    if (!sessionDoc.exists()) {
++      // Handle case where session was deleted after booking
++      console.warn("Session not found, but proceeding to cancel booking.");
++      transaction.update(bookingRef, { status: 'cancelled' });
++      return;
++    }
++
++    const session = sessionDoc.data() as Schedule;
++    transaction.update(sessionRef, {
++      spotsRemaining: session.spotsRemaining + 1,
++    });
++    transaction.update(bookingRef, { status: 'cancelled' });
++  });
++};
++
++// Get all bookings for a user
++const getUserBookings = (userId: string, callback: (bookings: Booking[]) => void) => {
++  const q = query(collection(db, 'bookings'), where('userId', '==', userId), where('status', '==', 'active'));
++  
++  return onSnapshot(q, (querySnapshot) => {
++    const bookings = querySnapshot.docs.map(
++      doc => ({ id: doc.id, ...doc.data() } as Booking)
++    );
++    callback(bookings);
++  });
+ };
+ 
+-const cancelBooking = async (bookingId: string): Promise<void> => {
+-  await deleteDoc(doc(db, 'bookings', bookingId));
++// Check session capacity without booking
++const checkSessionCapacity = async (sessionId: string): Promise<{ capacity: number; spotsRemaining: number }> => {
++    const session = await getSessionById(sessionId);
++    if (!session) {
++        throw new Error("Session not found");
++    }
++    return {
++        capacity: session.capacity,
++        spotsRemaining: session.spotsRemaining,
++    };
++};
++
++// Get all bookings for a specific session (for roster view)
++const getSessionBookings = async (sessionId: string): Promise<Booking[]> => {
++    const q = query(
++        collection(db, "bookings"),
++        where("sessionId", "==", sessionId),
++        where("status", "==", "active")
++    );
++    const querySnapshot = await getDocs(q);
++    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
++};
++
++// Get bookings for a list of friends
++const getFriendBookings = (friendIds: string[], callback: (bookings: Booking[]) => void) => {
++  if (friendIds.length === 0) {
++    callback([]);
++    return () => {};
++  }
++  const q = query(collection(db, 'bookings'), where('userId', 'in', friendIds), where('status', '==', 'active'));
++
++  return onSnapshot(q, (querySnapshot) => {
++    const bookings = querySnapshot.docs.map(
++      doc => ({ id: doc.id, ...doc.data() } as Booking)
++    );
++    callback(bookings);
++  });
+ };
+ 
+ export const scheduleService = {
+   getSchedules,
++  getSessionById,
+   bookSession,
+   cancelBooking,
++  getUserBookings,
++  checkSessionCapacity,
++  getSessionBookings,
++  getFriendBookings,
+ };
+\ No newline at end of file
+diff --git a/src/services/firebase/userService.ts b/src/services/firebase/userService.ts
+index 2abe9bc..2efc513 100644
+--- a/src/services/firebase/userService.ts
++++ b/src/services/firebase/userService.ts
+@@ -35,9 +35,18 @@ const searchByFriendId = async (friendId: string): Promise<UserProfile | null> =
+     return null;
+ }
+ 
++import type { ProgramAssignment } from '@/types';
++
++const getUserPrograms = async (userId: string): Promise<ProgramAssignment[]> => {
++  const q = query(collection(db, 'programAssignments'), where('userId', '==', userId));
++  const querySnapshot = await getDocs(q);
++  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgramAssignment));
++};
++
+ export const userService = {
+   createUserProfile,
+   getUserProfile,
+   updateUserProfile,
+   searchByFriendId,
++  getUserPrograms,
+ };
+\ No newline at end of file
+

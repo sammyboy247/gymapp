@@ -11,6 +11,7 @@ export const ScheduleView: React.FC = () => {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [friendBookings, setFriendBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
   const [filter, setFilter] = useState({
     startDate: new Date(),
@@ -28,12 +29,16 @@ export const ScheduleView: React.FC = () => {
       (newSchedules) => {
         setSchedules(newSchedules);
         setLoading(false);
-      }
+      },
+      filter.sessionType === 'all' ? null : filter.sessionType
     );
 
     if (userId) {
       const unsubscribeBookings = scheduleService.getUserBookings(userId, setUserBookings);
-      const unsubscribeFriendBookings = scheduleService.getFriendBookings(userProfile?.friends || [], setFriendBookings);
+      const unsubscribeFriendBookings = scheduleService.getFriendBookings(
+        userProfile?.friends || [],
+        setFriendBookings
+      );
       return () => {
         unsubscribeSchedules();
         unsubscribeBookings();
@@ -44,10 +49,10 @@ export const ScheduleView: React.FC = () => {
     return () => {
       unsubscribeSchedules();
     };
-  }, [filter.startDate, filter.endDate, userId]);
+  }, [filter.startDate, filter.endDate, filter.sessionType, userId, userProfile?.friends]);
 
   const handleSessionClick = (session: Schedule) => {
-    if (session.spotsRemaining > 0 && !isUserBooked(session.id)) {
+    if (session.spotsRemaining > 0 || isUserBooked(session.id)) {
       setSelectedSession(session);
     }
   };
@@ -55,10 +60,6 @@ export const ScheduleView: React.FC = () => {
   const isUserBooked = (sessionId: string) => {
     return userBookings.some(booking => booking.sessionId === sessionId);
   };
-
-  const filteredSchedules = schedules.filter(
-    schedule => filter.sessionType === 'all' || schedule.sessionType === filter.sessionType
-  );
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -78,43 +79,59 @@ export const ScheduleView: React.FC = () => {
             onChange={e => setFilter({ ...filter, sessionType: e.target.value })}
           >
             <option value="all">All</option>
-            <option value="strength">Strength</option>
-            <option value="cardio">Cardio</option>
-            <option value="yoga">Yoga</option>
+            <option value="Morning Strength">Morning Strength</option>
+            <option value="Lunch HIIT">Lunch HIIT</option>
+            <option value="Evening CrossFit">Evening CrossFit</option>
+            <option value="Morning Yoga">Morning Yoga</option>
           </select>
         </div>
       </div>
 
-      {loading && <LoadingSpinner />}
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <LoadingSpinner />
+        </div>
+      )}
+      {error && <p className="text-red-500">{error}</p>}
 
-      {!loading && (
+      {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredSchedules.map(session => (
+          {schedules.map(session => (
             <div
               key={session.id}
               onClick={() => handleSessionClick(session)}
-              className={`p-4 border rounded-lg ${
+              className={`p-4 border rounded-lg transition-colors ${
                 isUserBooked(session.id)
                   ? 'bg-blue-100 border-blue-500'
                   : session.spotsRemaining > 0
-                  ? 'cursor-pointer hover:bg-zinc-100'
-                  : 'bg-zinc-200 text-zinc-500'
+                  ? 'cursor-pointer hover:bg-zinc-100 border-gray-300'
+                  : 'bg-zinc-200 text-zinc-500 border-gray-200'
               }`}
             >
-              <h3 className="font-bold">{session.sessionType}</h3>
-              <p>{new Date(session.startTime.seconds * 1000).toLocaleString()}</p>
-              <p>Coach: {session.coachName}</p>
-              <p>
+              <h3 className="font-bold text-lg">{session.sessionType}</h3>
+              <p className="text-sm text-gray-600">
+                {session.startTime.toDate().toLocaleDateString()} at{' '}
+                {session.startTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-sm text-gray-600">Coach: {session.coachName}</p>
+              <p className="text-sm text-gray-600">
                 Spots: {session.spotsRemaining} / {session.capacity}
               </p>
+              {session.location && <p className="text-sm text-gray-500">📍 {session.location}</p>}
               {isUserBooked(session.id) && (
-                <p className="text-blue-600 font-semibold mt-2">Booked</p>
+                <p className="text-blue-600 font-semibold mt-2">✓ Booked</p>
               )}
               {friendBookings.some(b => b.sessionId === session.id) && (
-                <p className="text-green-600 font-semibold mt-2">Friend is going</p>
+                <p className="text-green-600 font-semibold mt-2">👥 Friend is going</p>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && !error && schedules.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          No classes scheduled for the selected period.
         </div>
       )}
 
