@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { LogOut, User, LayoutDashboard, Calendar } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Calendar, Users } from 'lucide-react';
 import { authService } from '@/services/firebase/authService';
 
 export const Navbar: React.FC = () => {
@@ -30,6 +30,9 @@ export const Navbar: React.FC = () => {
             <>
               <Link to="/schedule" className="flex items-center text-zinc-600 hover:text-blue-600">
                 <Calendar className="w-5 h-5 mr-1" /> Schedule
+              </Link>
+              <Link to="/social" className="flex items-center text-zinc-600 hover:text-blue-600">
+                <Users className="w-5 h-5 mr-1" /> Friends
               </Link>
               {userProfile?.role === 'admin' && ( // Use userProfile.role
                 <Link to="/admin" className="flex items-center text-zinc-600 hover:text-blue-600">

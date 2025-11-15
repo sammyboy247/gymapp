@@ -1,0 +1,505 @@
+diff --git a/index.html b/index.html
+index 93b7167..030fa32 100644
+--- a/index.html
++++ b/index.html
+@@ -7,7 +7,7 @@
+     <title>gymapp-temp</title>
+   </head>
+   <body>
+-    <div id="app"></div>
++    <div id="root"></div>
+     <script type="module" src="/src/main.ts"></script>
+   </body>
+ </html>
+diff --git a/src/features/admin/components/AssignProgramModal.tsx b/src/features/admin/components/AssignProgramModal.tsx
+new file mode 100644
+index 0000000..d996e21
+--- /dev/null
++++ b/src/features/admin/components/AssignProgramModal.tsx
+@@ -0,0 +1,141 @@
++import React, { useState, useEffect } from 'react';
++import { useForm, Controller } from 'react-hook-form';
++import { zodResolver } from '@hookform/resolvers/zod';
++import * as z from 'zod';
++import { Program, UserProfile, ProgramAssignment } from '@/types';
++import { programService } from '@/services/firebase/programService';
++import { userService } from '@/services/firebase/userService';
++
++const assignmentSchema = z.object({
++  userId: z.string().min(1, 'Member is required'),
++  programId: z.string().min(1, 'Program is required'),
++  startDate: z.date(),
++  notes: z.string().optional(),
++});
++
++interface Props {
++  onClose: () => void;
++  onAssign: (assignment: ProgramAssignment) => void;
++}
++
++export const AssignProgramModal: React.FC<Props> = ({ onClose, onAssign }) => {
++  const [programs, setPrograms] = useState<Program[]>([]);
++  const [users, setUsers] = useState<UserProfile[]>([]);
++  const [searchTerm, setSearchTerm] = useState('');
++
++  const { handleSubmit, control, formState: { errors } } = useForm<ProgramAssignment>({
++    resolver: zodResolver(assignmentSchema),
++  });
++
++  useEffect(() => {
++    const fetchPrograms = async () => {
++      const fetchedPrograms = await programService.getPrograms();
++      setPrograms(fetchedPrograms);
++    };
++    fetchPrograms();
++  }, []);
++
++  useEffect(() => {
++    const fetchUsers = async () => {
++      if (searchTerm) {
++        const fetchedUsers = await userService.searchUsers(searchTerm);
++        setUsers(fetchedUsers);
++      } else {
++        setUsers([]);
++      }
++    };
++    fetchUsers();
++  }, [searchTerm]);
++
++  const onSubmit = async (data: ProgramAssignment) => {
++    const newAssignmentId = await programService.assignProgram(data);
++    onAssign({ ...data, id: newAssignmentId });
++    onClose();
++  };
++
++  return (
++    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
++      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
++        <h2 className="text-2xl font-semibold mb-4">Assign Program</h2>
++        <form onSubmit={handleSubmit(onSubmit)}>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Search Member</label>
++            <input
++              type="text"
++              value={searchTerm}
++              onChange={(e) => setSearchTerm(e.target.value)}
++              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
++              placeholder="Search by name or email"
++            />
++          </div>
++          {users.length > 0 && (
++            <div className="mb-4 border border-gray-300 rounded-md max-h-40 overflow-y-auto">
++              {users.map(user => (
++                <div key={user.id} className="p-2 hover:bg-gray-100 cursor-pointer">
++                  {user.displayName} ({user.email})
++                </div>
++              ))}
++            </div>
++          )}
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Select Member</label>
++            <Controller
++              name="userId"
++              control={control}
++              render={({ field }) => (
++                <select {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
++                  <option value="">Select a member</option>
++                  {users.map(user => (
++                    <option key={user.id} value={user.id}>{user.displayName}</option>
++                  ))}
++                </select>
++              )}
++            />
++            {errors.userId && <p className="text-red-500 text-xs mt-1">{errors.userId.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Select Program</label>
++            <Controller
++              name="programId"
++              control={control}
++              render={({ field }) => (
++                <select {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
++                  <option value="">Select a program</option>
++                  {programs.map(program => (
++                    <option key={program.id} value={program.id}>{program.name}</option>
++                  ))}
++                </select>
++              )}
++            />
++            {errors.programId && <p className="text-red-500 text-xs mt-1">{errors.programId.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Start Date</label>
++            <Controller
++              name="startDate"
++              control={control}
++              render={({ field }) => <input type="date" {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++            {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Notes</label>
++            <Controller
++              name="notes"
++              control={control}
++              render={({ field }) => <textarea {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++          </div>
++          <div className="flex justify-end mt-6">
++            <button type="button" onClick={onClose} className="mr-2 px-4 py-2 bg-gray-300 rounded">
++              Cancel
++            </button>
++            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">
++              Assign
++            </button>
++          </div>
++        </form>
++      </div>
++    </div>
++  );
++};
+diff --git a/src/features/admin/components/ProgramFormModal.tsx b/src/features/admin/components/ProgramFormModal.tsx
+new file mode 100644
+index 0000000..b327190
+--- /dev/null
++++ b/src/features/admin/components/ProgramFormModal.tsx
+@@ -0,0 +1,155 @@
++import React, { useState, useEffect } from 'react';
++import { useForm, Controller } from 'react-hook-form';
++import { zodResolver } from '@hookform/resolvers/zod';
++import * as z from 'zod';
++import { Program } from '@/types';
++import { programService } from '@/services/firebase/programService';
++
++const programSchema = z.object({
++  name: z.string().min(1, 'Name is required'),
++  description: z.string().min(1, 'Description is required'),
++  type: z.enum(['strength', 'cardio', 'hybrid', 'flexibility', 'other']),
++  durationWeeks: z.number().min(1),
++  exercises: z.array(z.string()).min(1),
++  isActive: z.boolean(),
++});
++
++interface Props {
++  program?: Program | null;
++  onClose: () => void;
++  onSave: (program: Program) => void;
++}
++
++export const ProgramFormModal: React.FC<Props> = ({
++  program,
++  onClose,
++  onSave,
++}) => {
++  const {
++    handleSubmit,
++    control,
++    reset,
++    formState: { errors },
++  } = useForm<Program>({
++    resolver: zodResolver(programSchema),
++    defaultValues: program || {
++      name: '',
++      description: '',
++      type: 'strength',
++      durationWeeks: 4,
++      exercises: [],
++      isActive: true,
++    },
++  });
++
++  useEffect(() => {
++    reset(
++      program || {
++        name: '',
++        description: '',
++        type: 'strength',
++        durationWeeks: 4,
++        exercises: [],
++        isActive: true,
++      }
++    );
++  }, [program, reset]);
++
++  const onSubmit = async (data: Program) => {
++    if (program) {
++      await programService.updateProgram(program.id, data);
++      onSave({ ...data, id: program.id });
++    } else {
++      const newProgramId = await programService.createProgram(data);
++      onSave({ ...data, id: newProgramId });
++    }
++    onClose();
++  };
++
++  return (
++    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
++      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
++        <h2 className="text-2xl font-semibold mb-4">
++          {program ? 'Edit Program' : 'Create Program'}
++        </h2>
++        <form onSubmit={handleSubmit(onSubmit)}>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Name</label>
++            <Controller
++              name="name"
++              control={control}
++              render={({ field }) => <input {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Description</label>
++            <Controller
++              name="description"
++              control={control}
++              render={({ field }) => <textarea {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Type</label>
++            <Controller
++              name="type"
++              control={control}
++              render={({ field }) => (
++                <select {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
++                  <option value="strength">Strength</option>
++                  <option value="cardio">Cardio</option>
++                  <option value="hybrid">Hybrid</option>
++                  <option value="flexibility">Flexibility</option>
++                  <option value="other">Other</option>
++                </select>
++              )}
++            />
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Duration (Weeks)</label>
++            <Controller
++              name="durationWeeks"
++              control={control}
++              render={({ field }) => <input type="number" {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++            {errors.durationWeeks && <p className="text-red-500 text-xs mt-1">{errors.durationWeeks.message}</p>}
++          </div>
++          <div className="mb-4">
++            <label className="block text-sm font-medium text-gray-700">Exercises (comma-separated)</label>
++            <Controller
++              name="exercises"
++              control={control}
++              render={({ field }) => <input {...field} onChange={e => field.onChange(e.target.value.split(','))} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
++            />
++            {errors.exercises && <p className="text-red-500 text-xs mt-1">{errors.exercises.message}</p>}
++          </div>
++          <div className="flex items-center mb-4">
++            <Controller
++              name="isActive"
++              control={control}
++              render={({ field }) => <input type="checkbox" {...field} checked={field.value} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />}
++            />
++            <label className="ml-2 block text-sm text-gray-900">Active</label>
++          </div>
++          <div className="flex justify-end mt-6">
++            <button
++              type="button"
++              onClick={onClose}
++              className="mr-2 px-4 py-2 bg-gray-300 rounded"
++            >
++              Cancel
++            </button>
++            <button
++              type="submit"
++              className="px-4 py-2 bg-blue-600 text-white rounded"
++            >
++              {program ? 'Update' : 'Create'}
++            </button>
++          </div>
++        </form>
++      </div>
++    </div>
++  );
++};
+diff --git a/src/features/admin/components/ProgramManager.tsx b/src/features/admin/components/ProgramManager.tsx
+index ddae013..2ae99df 100644
+--- a/src/features/admin/components/ProgramManager.tsx
++++ b/src/features/admin/components/ProgramManager.tsx
+@@ -1,18 +1,97 @@
+-import React from 'react';
+-// This component allows Admins to create Programs and assign them to users (PoC Spec 2.3.1)
++import React, { useState, useEffect } from 'react';
++import { Program, ProgramAssignment } from '@/types';
++import { programService } from '@/services/firebase/programService';
++import { ProgramFormModal } from './ProgramFormModal';
++import { AssignProgramModal } from './AssignProgramModal';
++
+ export const ProgramManager: React.FC = () => {
+-  // TODO:
+-  // 1. Implement form to create a new Program
+-  //    (Write to /artifacts/{appId}/public/data/programs)
+-  // 2. Implement UI to assign a Program ID to a User
+-  //    (Update /artifacts/{appId}/users/{userId}/profile/main doc, 'assignedProgramIds' field)
++  const [programs, setPrograms] = useState<Program[]>([]);
++  const [assignments, setAssignments] = useState<ProgramAssignment[]>([]);
++  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
++  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
++  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
++
++  useEffect(() => {
++    const fetchPrograms = async () => {
++      const fetchedPrograms = await programService.getPrograms();
++      setPrograms(fetchedPrograms);
++    };
++    fetchPrograms();
++  }, []);
++
++  const handleSaveProgram = (program: Program) => {
++    if (selectedProgram) {
++      setPrograms(programs.map((p) => (p.id === program.id ? program : p)));
++    } else {
++      setPrograms([...programs, program]);
++    }
++  };
++
++  const handleAssignProgram = (assignment: ProgramAssignment) => {
++    setAssignments([...assignments, assignment]);
++  };
+ 
+   return (
+     <div className="bg-white p-6 rounded-lg shadow-md">
+-      <h2 className="text-2xl font-semibold mb-4">Manage Member Programs</h2>
+-      <div className="border border-zinc-200 rounded-lg p-4 min-h-[150px] flex items-center justify-center">
+-        <p className="text-zinc-500">[Admin program creation/assignment placeholder]</p>
++      <div className="flex justify-between items-center mb-4">
++        <h2 className="text-2xl font-semibold">Manage Member Programs</h2>
++        <button
++          onClick={() => {
++            setSelectedProgram(null);
++            setIsFormModalOpen(true);
++          }}
++          className="px-4 py-2 bg-blue-600 text-white rounded"
++        >
++          Create Program
++        </button>
++      </div>
++      <div className="space-y-4">
++        {programs.map(program => (
++          <div key={program.id} className="border border-zinc-200 rounded-lg p-4">
++            <h3 className="text-xl font-semibold">{program.name}</h3>
++            <p className="text-gray-600">{program.description}</p>
++            <div className="flex justify-end space-x-2 mt-4">
++              <button
++                onClick={() => {
++                  setSelectedProgram(program);
++                  setIsFormModalOpen(true);
++                }}
++                className="px-3 py-1 bg-yellow-500 text-white rounded"
++              >
++                Edit
++              </button>
++              <button
++                onClick={async () => {
++                  await programService.deleteProgram(program.id);
++                  setPrograms(programs.filter(p => p.id !== program.id));
++                }}
++                className="px-3 py-1 bg-red-600 text-white rounded"
++              >
++                Delete
++              </button>
++              <button
++                onClick={() => setIsAssignModalOpen(true)}
++                className="px-3 py-1 bg-green-600 text-white rounded"
++              >
++                Assign
++              </button>
++            </div>
++          </div>
++        ))}
+       </div>
++      {isFormModalOpen && (
++        <ProgramFormModal
++          program={selectedProgram}
++          onClose={() => setIsFormModalOpen(false)}
++          onSave={handleSaveProgram}
++        />
++      )}
++      {isAssignModalOpen && (
++        <AssignProgramModal
++          onClose={() => setIsAssignModalOpen(false)}
++          onAssign={handleAssignProgram}
++        />
++      )}
+     </div>
+   );
+-};
+\ No newline at end of file
++};
+diff --git a/src/services/firebase/programService.ts b/src/services/firebase/programService.ts
+new file mode 100644
+index 0000000..c085d5c
+--- /dev/null
++++ b/src/services/firebase/programService.ts
+@@ -0,0 +1,63 @@
++import {
++  collection,
++  addDoc,
++  updateDoc,
++  deleteDoc,
++  getDocs,
++  doc,
++  serverTimestamp,
++  query,
++  where,
++} from 'firebase/firestore';
++import { db } from './config';
++import { Program, ProgramAssignment } from '@/types';
++
++const programsCollection = collection(db, 'programs');
++const assignmentsCollection = collection(db, 'programAssignments');
++
++export const programService = {
++  createProgram: async (programData: Omit<Program, 'id' | 'createdAt'>) => {
++    const docRef = await addDoc(programsCollection, {
++      ...programData,
++      createdAt: serverTimestamp(),
++    });
++    return docRef.id;
++  },
++
++  updateProgram: async (programId: string, programData: Partial<Program>) => {
++    const programDoc = doc(db, 'programs', programId);
++    await updateDoc(programDoc, programData);
++  },
++
++  deleteProgram: async (programId: string) => {
++    const programDoc = doc(db, 'programs', programId);
++    await deleteDoc(programDoc);
++  },
++
++  getPrograms: async (): Promise<Program[]> => {
++    const snapshot = await getDocs(programsCollection);
++    return snapshot.docs.map(
++      (doc) => ({ id: doc.id, ...doc.data() } as Program)
++    );
++  },
++
++  assignProgram: async (
++    assignmentData: Omit<ProgramAssignment, 'id' | 'assignedAt'>
++  ) => {
++    const docRef = await addDoc(assignmentsCollection, {
++      ...assignmentData,
++      assignedAt: serverTimestamp(),
++    });
++    return docRef.id;
++  },
++
++  getProgramAssignments: async (
++    programId: string
++  ): Promise<ProgramAssignment[]> => {
++    const q = query(assignmentsCollection, where('programId', '==', programId));
++    const snapshot = await getDocs(q);
++    return snapshot.docs.map(
++      (doc) => ({ id: doc.id, ...doc.data() } as ProgramAssignment)
++    );
++  },
++};
+

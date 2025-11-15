@@ -1,0 +1,692 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 7368855..9438846 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -9,6 +9,7 @@ import { SchedulePage } from '@/pages/SchedulePage';
+ import { AdminPage } from '@/pages/AdminPage';
+ import { ProfilePage } from '@/pages/ProfilePage';
+ import { HomePage } from '@/pages/HomePage';
++import SocialPage from '@/pages/SocialPage';
+ 
+ function App() {
+   // Initialize Firebase auth state listener
+@@ -24,6 +25,7 @@ function App() {
+           <Route path="/" element={<HomePage />} />
+           <Route path="/schedule" element={<SchedulePage />} />
+           <Route path="/profile" element={<ProfilePage />} />
++          <Route path="/social" element={<SocialPage />} />
+             
+           {/* Admin-Only Route */}
+           <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
+diff --git a/src/components/layout/Navbar.tsx b/src/components/layout/Navbar.tsx
+index ee7ce1e..034ca50 100644
+--- a/src/components/layout/Navbar.tsx
++++ b/src/components/layout/Navbar.tsx
+@@ -1,7 +1,7 @@
+ import React from 'react';
+ import { Link, useNavigate } from 'react-router-dom';
+ import { useAuthStore } from '@/store/authStore';
+-import { LogOut, User, LayoutDashboard, Calendar } from 'lucide-react';
++import { LogOut, User, LayoutDashboard, Calendar, Users } from 'lucide-react';
+ import { authService } from '@/services/firebase/authService';
+ 
+ export const Navbar: React.FC = () => {
+@@ -31,6 +31,9 @@ export const Navbar: React.FC = () => {
+               <Link to="/schedule" className="flex items-center text-zinc-600 hover:text-blue-600">
+                 <Calendar className="w-5 h-5 mr-1" /> Schedule
+               </Link>
++              <Link to="/social" className="flex items-center text-zinc-600 hover:text-blue-600">
++                <Users className="w-5 h-5 mr-1" /> Friends
++              </Link>
+               {userProfile?.role === 'admin' && ( // Use userProfile.role
+                 <Link to="/admin" className="flex items-center text-zinc-600 hover:text-blue-600">
+                   <LayoutDashboard className="w-5 h-5 mr-1" /> Admin
+diff --git a/src/features/social/components/FriendList.tsx b/src/features/social/components/FriendList.tsx
+new file mode 100644
+index 0000000..7489cdf
+--- /dev/null
++++ b/src/features/social/components/FriendList.tsx
+@@ -0,0 +1,73 @@
++import React, { useEffect, useState } from 'react';
++import { getUserFriends, removeFriend, updateActivitySharing } from '@/services/firebase/friendService';
++import { useAuthStore } from '@/store/auth';
++import { PublicUserData } from '@/types';
++
++interface FriendListProps {
++  friendsUpdated: boolean;
++}
++
++export const FriendList: React.FC<FriendListProps> = ({ friendsUpdated }) => {
++  const { user } = useAuthStore();
++  const [friends, setFriends] = useState<PublicUserData[]>([]);
++  const [loading, setLoading] = useState(true);
++
++  const fetchFriends = async () => {
++    if (!user) return;
++    setLoading(true);
++    const userFriends = await getUserFriends(user.uid);
++    setFriends(userFriends);
++    setLoading(false);
++  };
++
++  useEffect(() => {
++    fetchFriends();
++  }, [user, friendsUpdated]);
++
++  const handleRemoveFriend = async (friendId: string) => {
++    if (!user) return;
++    await removeFriend(user.uid, friendId);
++    fetchFriends();
++  };
++  
++  const handleShareActivityToggle = async (friendId: string, share: boolean) => {
++    if (!user) return;
++    await updateActivitySharing(user.uid, friendId, share);
++    // We can add a visual cue for this, but for now, it's a silent update.
++  };
++
++
++  if (loading) {
++    return <p>Loading friends...</p>;
++  }
++
++  return (
++    <div>
++      {friends.length > 0 ? (
++        <ul>
++          {friends.map((friend) => (
++            <li key={friend.userId} className="flex justify-between items-center p-2 border-b">
++              <div>
++                <p className="font-semibold">{friend.displayName}</p>
++                <p className="text-sm text-gray-500">{friend.friendId}</p>
++              </div>
++              <div className="flex items-center">
++                <label className="mr-2">
++                  <input
++                    type="checkbox"
++                    onChange={(e) => handleShareActivityToggle(friend.userId, e.target.checked)}
++                    className="mr-1"
++                  />
++                  Share Activity
++                </label>
++                <button onClick={() => handleRemoveFriend(friend.userId)} className="bg-red-500 text-white px-3 py-1 rounded-md">Remove</button>
++              </div>
++            </li>
++          ))}
++        </ul>
++      ) : (
++        <p>You have no friends yet. Add some!</p>
++      )}
++    </div>
++  );
++};
+\ No newline at end of file
+diff --git a/src/features/social/components/FriendManager.tsx b/src/features/social/components/FriendManager.tsx
+index c5208fb..7168588 100644
+--- a/src/features/social/components/FriendManager.tsx
++++ b/src/features/social/components/FriendManager.tsx
+@@ -1,18 +1,56 @@
+-import React from 'react';
+-// This component handles the Friend ID search and double-opt-in (PoC Spec 2.3.2)
++import React, { useState } from 'react';
++import { FriendSearch } from './FriendSearch';
++import { FriendList } from './FriendList';
++import { FriendRequests } from './FriendRequests';
++import { useAuthStore } from '@/store/auth';
++
+ export const FriendManager: React.FC = () => {
+-  // TODO:
+-  // 1. Implement an input to search for a 'friendId'
+-  // 2. On search, check for a user with that ID
+-  // 3. Send a "friend request" (e.g., write to a /friendRequests subcollection)
+-  // 4. Display pending incoming requests with "Accept" / "Deny" buttons
+-  // 5. List all accepted friends
+-    
++  const { user, userProfile } = useAuthStore();
++  const [activeTab, setActiveTab] = useState('friends');
++  const [friendsUpdated, setFriendsUpdated] = useState(false);
++  const [requestsUpdated, setRequestsUpdated] = useState(false);
++
++  const handleFriendRequestSent = () => {
++    setRequestsUpdated(prev => !prev);
++  };
++
++  const handleRequestsUpdated = () => {
++    setFriendsUpdated(prev => !prev);
++  };
++
+   return (
+     <div className="bg-white p-6 rounded-lg shadow-md">
+       <h2 className="text-2xl font-semibold mb-4">My Friends</h2>
+-      <div className="border border-zinc-200 rounded-lg p-4 min-h-[150px] flex items-center justify-center">
+-        <p className="text-zinc-500">[Friend list and 'Add Friend' UI placeholder]</p>
++      <p className="mb-4">Your Friend ID: <span className="font-mono bg-gray-200 px-2 py-1 rounded">{userProfile?.friendId}</span></p>
++
++      <div className="mb-4">
++        <FriendSearch onFriendRequestSent={handleFriendRequestSent} />
++      </div>
++
++      <div className="border-b border-gray-200">
++        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
++          <button
++            onClick={() => setActiveTab('friends')}
++            className={`${
++              activeTab === 'friends' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
++            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
++          >
++            Friends
++          </button>
++          <button
++            onClick={() => setActiveTab('requests')}
++            className={`${
++              activeTab === 'requests' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
++            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
++          >
++            Requests
++          </button>
++        </nav>
++      </div>
++
++      <div className="py-6">
++        {activeTab === 'friends' && <FriendList friendsUpdated={friendsUpdated} />}
++        {activeTab === 'requests' && <FriendRequests onRequestsUpdated={handleRequestsUpdated} requestsUpdated={requestsUpdated} />}
+       </div>
+     </div>
+   );
+diff --git a/src/features/social/components/FriendRequests.tsx b/src/features/social/components/FriendRequests.tsx
+new file mode 100644
+index 0000000..fb740c4
+--- /dev/null
++++ b/src/features/social/components/FriendRequests.tsx
+@@ -0,0 +1,84 @@
++import React, { useEffect, useState } from 'react';
++import { getPendingRequests, acceptFriendRequest, denyFriendRequest, cancelFriendRequest } from '@/services/firebase/friendService';
++import { useAuthStore } from '@/store/auth';
++import { FriendRequestWithRecipientData } from '@/types';
++
++interface FriendRequestsProps {
++  onRequestsUpdated: () => void;
++  requestsUpdated: boolean;
++}
++
++export const FriendRequests: React.FC<FriendRequestsProps> = ({ onRequestsUpdated, requestsUpdated }) => {
++  const { user } = useAuthStore();
++  const [sentRequests, setSentRequests] = useState<FriendRequestWithRecipientData[]>([]);
++  const [receivedRequests, setReceivedRequests] = useState<FriendRequestWithRecipientData[]>([]);
++  const [loading, setLoading] = useState(true);
++
++  const fetchRequests = async () => {
++    if (!user) return;
++    setLoading(true);
++    const { sent, received } = await getPendingRequests(user.uid);
++    setSentRequests(sent);
++    setReceivedRequests(received);
++    setLoading(false);
++  };
++
++  useEffect(() => {
++    fetchRequests();
++  }, [user, requestsUpdated]);
++
++  const handleAccept = async (request: FriendRequestWithRecipientData) => {
++    await acceptFriendRequest(request.id, request.fromUserId, request.toUserId);
++    onRequestsUpdated();
++    fetchRequests();
++  };
++
++  const handleDeny = async (request: FriendRequestWithRecipientData) => {
++    await denyFriendRequest(request.id, request.fromUserId, request.toUserId);
++    fetchRequests();
++  };
++
++  const handleCancel = async (request: FriendRequestWithRecipientData) => {
++    await cancelFriendRequest(request.id, request.fromUserId, request.toUserId);
++    fetchRequests();
++  };
++
++  if (loading) {
++    return <p>Loading requests...</p>;
++  }
++
++  return (
++    <div>
++      <h3 className="text-lg font-semibold mb-2">Received Requests</h3>
++      {receivedRequests.length > 0 ? (
++        <ul>
++          {receivedRequests.map((req) => (
++            <li key={req.id} className="flex justify-between items-center p-2 border-b">
++              <span>{req.recipientData.displayName}</span>
++              <div>
++                <button onClick={() => handleAccept(req)} className="bg-green-500 text-white px-3 py-1 rounded-md mr-2">Accept</button>
++                <button onClick={() => handleDeny(req)} className="bg-red-500 text-white px-3 py-1 rounded-md">Deny</button>
++              </div>
++            </li>
++          ))}
++        </ul>
++      ) : (
++        <p>No incoming friend requests.</p>
++      )}
++
++      <h3 className="text-lg font-semibold mt-4 mb-2">Sent Requests</h3>
++      {sentRequests.length > 0 ? (
++        <ul>
++          {sentRequests.map((req) => (
++            <li key={req.id} className="flex justify-between items-center p-2 border-b">
++              <span>{req.recipientData.displayName}</span>
++              <button onClick={() => handleCancel(req)} className="bg-gray-500 text-white px-3 py-1 rounded-md">Cancel</button>
++            </li>
++          ))}
++        </ul>
++      ) : (
++        <p>No outgoing friend requests.</p>
++      )}
++    </div>
++  );
++};
+\ No newline at end of file
+diff --git a/src/features/social/components/FriendSearch.tsx b/src/features/social/components/FriendSearch.tsx
+new file mode 100644
+index 0000000..7e4ee4e
+--- /dev/null
++++ b/src/features/social/components/FriendSearch.tsx
+@@ -0,0 +1,88 @@
++import React, { useState } from 'react';
++import { searchByFriendId, sendFriendRequest } from '@/services/firebase/friendService';
++import { PublicUserData } from '@/types';
++import { useAuthStore } from '@/store/auth';
++
++interface FriendSearchProps {
++  onFriendRequestSent: () => void;
++}
++
++export const FriendSearch: React.FC<FriendSearchProps> = ({ onFriendRequestSent }) => {
++  const [friendId, setFriendId] = useState('');
++  const [searchResult, setSearchResult] = useState<PublicUserData | null>(null);
++  const [error, setError] = useState<string | null>(null);
++  const [isRequesting, setIsRequesting] = useState(false);
++  const { user } = useAuthStore();
++
++  const handleSearch = async () => {
++    if (!friendId.trim()) {
++      setError('Please enter a Friend ID.');
++      return;
++    }
++    setError(null);
++    setSearchResult(null);
++
++    try {
++      const result = await searchByFriendId(friendId.trim());
++      if (result) {
++        setSearchResult(result);
++      } else {
++        setError('User not found.');
++      }
++    } catch (err) {
++      setError('An error occurred while searching.');
++    }
++  };
++
++  const handleSendRequest = async () => {
++    if (!searchResult || !user) return;
++
++    setIsRequesting(true);
++    try {
++      await sendFriendRequest(user.uid, searchResult.userId);
++      setSearchResult(null);
++      setFriendId('');
++      onFriendRequestSent();
++    } catch (err) {
++      setError('Failed to send friend request.');
++    } finally {
++      setIsRequesting(false);
++    }
++  };
++
++  return (
++    <div>
++      <div className="flex gap-2">
++        <input
++          type="text"
++          value={friendId}
++          onChange={(e) => setFriendId(e.target.value)}
++          placeholder="Enter Friend ID"
++          className="border border-gray-300 rounded-md px-3 py-2 w-full"
++        />
++        <button
++          onClick={handleSearch}
++          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
++        >
++          Search
++        </button>
++      </div>
++      {error && <p className="text-red-500 mt-2">{error}</p>}
++      {searchResult && (
++        <div className="mt-4 p-4 border rounded-md flex justify-between items-center">
++          <div>
++            <p className="font-semibold">{searchResult.displayName}</p>
++            <p className="text-sm text-gray-500">{searchResult.friendId}</p>
++          </div>
++          <button
++            onClick={handleSendRequest}
++            disabled={isRequesting}
++            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 disabled:bg-gray-400"
++          >
++            {isRequesting ? 'Sending...' : 'Send Request'}
++          </button>
++        </div>
++      )}
++    </div>
++  );
++};
+\ No newline at end of file
+diff --git a/src/pages/SocialPage.tsx b/src/pages/SocialPage.tsx
+new file mode 100644
+index 0000000..8aff261
+--- /dev/null
++++ b/src/pages/SocialPage.tsx
+@@ -0,0 +1,12 @@
++import React from 'react';
++import { FriendManager } from '@/features/social/components/FriendManager';
++
++const SocialPage: React.FC = () => {
++  return (
++    <div className="container mx-auto py-8">
++      <FriendManager />
++    </div>
++  );
++};
++
++export default SocialPage;
+\ No newline at end of file
+diff --git a/src/services/firebase/friendService.ts b/src/services/firebase/friendService.ts
+new file mode 100644
+index 0000000..1ac3e8d
+--- /dev/null
++++ b/src/services/firebase/friendService.ts
+@@ -0,0 +1,269 @@
++import {
++  collection,
++  query,
++  where,
++  getDocs,
++  doc,
++  writeBatch,
++  getDoc,
++  runTransaction,
++  arrayUnion,
++  arrayRemove,
++  Timestamp,
++  serverTimestamp,
++} from 'firebase/firestore';
++import { db } from './config';
++import { UserProfile, PublicUserData, FriendRequest, Friendship } from '@/types';
++
++const usersCollection = collection(db, 'users');
++const friendRequestsCollection = collection(db, 'friendRequests');
++const friendshipsCollection = collection(db, 'friendships');
++
++// Search for a user by their exact friendId
++export const searchByFriendId = async (friendId: string): Promise<PublicUserData | null> => {
++  const q = query(usersCollection, where('friendId', '==', friendId));
++  const querySnapshot = await getDocs(q);
++
++  if (querySnapshot.empty) {
++    return null;
++  }
++
++  const userDoc = querySnapshot.docs[0];
++  const userData = userDoc.data() as UserProfile;
++
++  return {
++    userId: userDoc.id,
++    displayName: userData.displayName,
++    friendId: userData.friendId,
++  };
++};
++
++// Send a friend request
++export const sendFriendRequest = async (fromUserId: string, toUserId: string) => {
++  const batch = writeBatch(db);
++
++  const fromUserRef = doc(usersCollection, fromUserId);
++  batch.update(fromUserRef, { friendRequestsSent: arrayUnion(toUserId) });
++
++  const toUserRef = doc(usersCollection, toUserId);
++  batch.update(toUserRef, { friendRequestsReceived: arrayUnion(fromUserId) });
++
++  const newRequestRef = doc(friendRequestsCollection);
++  batch.set(newRequestRef, {
++    fromUserId,
++    toUserId,
++    status: 'pending',
++    createdAt: serverTimestamp(),
++  });
++
++  await batch.commit();
++};
++
++// Accept a friend request
++export const acceptFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
++  await runTransaction(db, async (transaction) => {
++    const requestRef = doc(friendRequestsCollection, requestId);
++    const fromUserRef = doc(usersCollection, fromUserId);
++    const toUserRef = doc(usersCollection, toUserId);
++
++    transaction.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
++    
++    transaction.update(fromUserRef, {
++      friendRequestsSent: arrayRemove(toUserId),
++      friends: arrayUnion(toUserId),
++    });
++
++    transaction.update(toUserRef, {
++      friendRequestsReceived: arrayRemove(fromUserId),
++      friends: arrayUnion(fromUserId),
++    });
++
++    const newFriendshipRef = doc(friendshipsCollection);
++    transaction.set(newFriendshipRef, {
++      user1Id: fromUserId,
++      user2Id: toUserId,
++      createdAt: serverTimestamp(),
++      user1ShareActivity: false,
++      user2ShareActivity: false,
++    });
++  });
++};
++
++// Deny a friend request
++export const denyFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
++  const batch = writeBatch(db);
++
++  const requestRef = doc(friendRequestsCollection, requestId);
++  batch.update(requestRef, { status: 'denied', respondedAt: serverTimestamp() });
++  
++  const fromUserRef = doc(usersCollection, fromUserId);
++  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
++
++  const toUserRef = doc(usersCollection, toUserId);
++  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
++
++  await batch.commit();
++};
++
++// Cancel a sent friend request
++export const cancelFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
++  const batch = writeBatch(db);
++
++  const requestRef = doc(friendRequestsCollection, requestId);
++  batch.delete(requestRef);
++
++  const fromUserRef = doc(usersCollection, fromUserId);
++  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
++
++  const toUserRef = doc(usersCollection, toUserId);
++  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
++
++  await batch.commit();
++};
++
++// Remove a friend
++export const removeFriend = async (userId: string, friendId: string) => {
++  await runTransaction(db, async (transaction) => {
++    const userRef = doc(usersCollection, userId);
++    const friendRef = doc(usersCollection, friendId);
++
++    transaction.update(userRef, { friends: arrayRemove(friendId) });
++    transaction.update(friendRef, { friends: arrayRemove(userId) });
++
++    const friendshipQuery = query(
++      friendshipsCollection,
++      where('user1Id', 'in', [userId, friendId]),
++      where('user2Id', 'in', [userId, friendId])
++    );
++    const friendshipSnapshot = await getDocs(friendshipQuery);
++    friendshipSnapshot.forEach((doc) => {
++      transaction.delete(doc.ref);
++    });
++  });
++};
++
++// Get user's friends with their public data
++export const getUserFriends = async (userId: string): Promise<PublicUserData[]> => {
++  const userRef = doc(usersCollection, userId);
++  const userDoc = await getDoc(userRef);
++  const userData = userDoc.data() as UserProfile;
++
++  if (!userData.friends || userData.friends.length === 0) {
++    return [];
++  }
++
++  const friendsQuery = query(usersCollection, where('__name__', 'in', userData.friends));
++  const friendsSnapshot = await getDocs(friendsQuery);
++
++  return friendsSnapshot.docs.map((doc) => {
++    const friendData = doc.data() as UserProfile;
++    return {
++      userId: doc.id,
++      displayName: friendData.displayName,
++      friendId: friendData.friendId,
++    };
++  });
++};
++
++// Get pending friend requests
++export const getPendingRequests = async (
++  userId: string
++): Promise<{
++  sent: FriendRequestWithRecipientData[];
++  received: FriendRequestWithRecipientData[];
++}> => {
++  const sentQuery = query(
++    friendRequestsCollection,
++    where('fromUserId', '==', userId),
++    where('status', '==', 'pending')
++  );
++  const receivedQuery = query(
++    friendRequestsCollection,
++    where('toUserId', '==', userId),
++    where('status', '==', 'pending')
++  );
++
++  const [sentSnapshot, receivedSnapshot] = await Promise.all([
++    getDocs(sentQuery),
++    getDocs(receivedQuery),
++  ]);
++
++  const sent = await Promise.all(
++    sentSnapshot.docs.map(async (doc) => {
++      const request = { id: doc.id, ...doc.data() } as FriendRequest;
++      const recipientDoc = await getDoc(doc(usersCollection, request.toUserId));
++      const recipientData = recipientDoc.data() as UserProfile;
++      return {
++        ...request,
++        recipientData: {
++          userId: recipientDoc.id,
++          displayName: recipientData.displayName,
++          friendId: recipientData.friendId,
++        },
++      };
++    })
++  );
++
++  const received = await Promise.all(
++    receivedSnapshot.docs.map(async (doc) => {
++      const request = { id: doc.id, ...doc.data() } as FriendRequest;
++      const senderDoc = await getDoc(doc(usersCollection, request.fromUserId));
++      const senderData = senderDoc.data() as UserProfile;
++      return {
++        ...request,
++        recipientData: {
++          userId: senderDoc.id,
++          displayName: senderData.displayName,
++          friendId: senderData.friendId,
++        },
++      };
++    })
++  );
++
++  return { sent, received };
++};
++
++// Update activity sharing status
++export const updateActivitySharing = async (userId: string, friendId: string, share: boolean) => {
++  const friendshipQuery = query(
++    friendshipsCollection,
++    where('user1Id', 'in', [userId, friendId]),
++    where('user2Id', 'in', [userId, friendId])
++  );
++  const friendshipSnapshot = await getDocs(friendshipQuery);
++  const friendshipDoc = friendshipSnapshot.docs[0];
++
++  if (friendshipDoc) {
++    const friendshipData = friendshipDoc.data() as Friendship;
++    const updateField = friendshipData.user1Id === userId ? 'user1ShareActivity' : 'user2ShareActivity';
++    
++    const batch = writeBatch(db);
++    batch.update(friendshipDoc.ref, { [updateField]: share });
++    await batch.commit()
++  }
++};
++
++// Get friends who are sharing their activity
++export const getFriendsWithActivitySharing = async (userId: string): Promise<string[]> => {
++  const userRef = doc(usersCollection, userId);
++  const userDoc = await getDoc(userRef);
++  const userData = userDoc.data() as UserProfile;
++
++  if (!userData.friends || userData.friends.length === 0) {
++    return [];
++  }
++
++  const friendshipsQuery1 = query(friendshipsCollection, where('user1Id', '==', userId), where('user2ShareActivity', '==', true));
++  const friendshipsQuery2 = query(friendshipsCollection, where('user2Id', '==', userId), where('user1ShareActivity', '==', true));
++
++  const [snapshot1, snapshot2] = await Promise.all([
++    getDocs(friendshipsQuery1),
++    getDocs(friendshipsQuery2),
++  ]);
++
++  const friendIds = new Set<string>();
++  snapshot1.forEach((doc) => friendIds.add((doc.data() as Friendship).user2Id));
++  snapshot2.forEach((doc) => friendIds.add((doc.data() as Friendship).user1Id));
++
++  return Array.from(friendIds);
++};
+\ No newline at end of file
+diff --git a/src/types/index.ts b/src/types/index.ts
+index 70f126d..624aa9f 100644
+--- a/src/types/index.ts
++++ b/src/types/index.ts
+@@ -68,6 +68,10 @@ export interface FriendRequest {
+   respondedAt?: Timestamp;
+ }
+ 
++export interface FriendRequestWithRecipientData extends FriendRequest {
++  recipientData: PublicUserData;
++}
++
+ export interface Friendship {
+   id: string;
+   user1Id: string;
+

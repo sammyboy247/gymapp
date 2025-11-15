@@ -14,21 +14,24 @@
  *   npx ts-node scripts/seedFirestore.ts
  */
 
-import { initializeApp, cert, ServiceAccount } from 'firebase-admin/app';
+import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import type { ServiceAccount } from 'firebase-admin';
 import * as dotenv from 'dotenv';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Load environment variables
 dotenv.config();
 
+// Load service account key
+const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+
 // Initialize Firebase Admin
 const app = initializeApp({
-  credential: cert({
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-    // For local development, you'll need to provide service account credentials
-    // See setup instructions in FIREBASE_SETUP.md
-  } as ServiceAccount),
+  credential: cert(serviceAccount as ServiceAccount),
 });
 
 const db = getFirestore(app);

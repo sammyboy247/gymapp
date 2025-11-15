@@ -7,25 +7,19 @@ import {
   writeBatch,
   getDoc,
   runTransaction,
-  Timestamp,
-  or,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase'; // Adjust this import to your firebase config
-import type {
-  PublicUserData,
-  FriendRequest,
-  Friendship,
-  UserProfile,
-} from '@/types';
+import { db } from './config';
+import type { UserProfile, PublicUserData, FriendRequest, Friendship, FriendRequestWithRecipientData } from '@/types';
 
 const usersCollection = collection(db, 'users');
 const friendRequestsCollection = collection(db, 'friendRequests');
 const friendshipsCollection = collection(db, 'friendships');
 
-// Search for a user by their exact Friend ID
-export const searchByFriendId = async (
-  friendId: string,
-): Promise<PublicUserData | null> => {
+// Search for a user by their exact friendId
+export const searchByFriendId = async (friendId: string): Promise<PublicUserData | null> => {
   const q = query(usersCollection, where('friendId', '==', friendId));
   const querySnapshot = await getDocs(q);
 
@@ -44,238 +38,123 @@ export const searchByFriendId = async (
 };
 
 // Send a friend request
-export const sendFriendRequest = async (
-  fromUserId: string,
-  toUserId: string,
-): Promise<void> => {
-  if (fromUserId === toUserId) {
-    throw new Error("You can't send a friend request to yourself.");
-  }
-
+export const sendFriendRequest = async (fromUserId: string, toUserId: string) => {
   const batch = writeBatch(db);
 
-  // 1. Create a new friend request document
-  const friendRequestRef = doc(friendRequestsCollection);
-  const newRequest: FriendRequest = {
-    id: friendRequestRef.id,
+  const fromUserRef = doc(usersCollection, fromUserId);
+  batch.update(fromUserRef, { friendRequestsSent: arrayUnion(toUserId) });
+
+  const toUserRef = doc(usersCollection, toUserId);
+  batch.update(toUserRef, { friendRequestsReceived: arrayUnion(fromUserId) });
+
+  const newRequestRef = doc(friendRequestsCollection);
+  batch.set(newRequestRef, {
     fromUserId,
     toUserId,
     status: 'pending',
-    createdAt: Timestamp.now(),
-  };
-  batch.set(friendRequestRef, newRequest);
-
-  // 2. Update the sender's profile
-  const fromUserRef = doc(usersCollection, fromUserId);
-  batch.update(fromUserRef, {
-    friendRequestsSent: [
-      ...(await getDoc(fromUserRef)
-        .then(doc => doc.data()?.friendRequestsSent)
-        .catch(() => [])),
-      friendRequestRef.id,
-    ],
-  });
-
-  // 3. Update the receiver's profile
-  const toUserRef = doc(usersCollection, toUserId);
-  batch.update(toUserRef, {
-    friendRequestsReceived: [
-      ...(await getDoc(toUserRef)
-        .then(doc => doc.data()?.friendRequestsReceived)
-        .catch(() => [])),
-      friendRequestRef.id,
-    ],
+    createdAt: serverTimestamp(),
   });
 
   await batch.commit();
 };
 
 // Accept a friend request
-export const acceptFriendRequest = async (
-  requestId: string,
-): Promise<void> => {
-  const requestRef = doc(friendRequestsCollection, requestId);
-
-  await runTransaction(db, async transaction => {
-    const requestDoc = await transaction.get(requestRef);
-    if (!requestDoc.exists()) {
-      throw new Error('Friend request not found.');
-    }
-
-    const request = requestDoc.data() as FriendRequest;
-    if (request.status !== 'pending') {
-      throw new Error('This request has already been responded to.');
-    }
-
-    const { fromUserId, toUserId } = request;
-
-    // 1. Update the friend request status
-    transaction.update(requestRef, {
-      status: 'accepted',
-      respondedAt: Timestamp.now(),
-    });
-
-    // 2. Create a new friendship document
-    const friendshipRef = doc(friendshipsCollection);
-    const newFriendship: Friendship = {
-      id: friendshipRef.id,
-      user1Id: fromUserId,
-      user2Id: toUserId,
-      createdAt: Timestamp.now(),
-      user1ShareActivity: true, // Default sharing to true
-      user2ShareActivity: true,
-    };
-    transaction.set(friendshipRef, newFriendship);
-
-    // 3. Add friend to both users' friend lists and remove requests
+export const acceptFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
+  await runTransaction(db, async (transaction) => {
+    const requestRef = doc(friendRequestsCollection, requestId);
     const fromUserRef = doc(usersCollection, fromUserId);
     const toUserRef = doc(usersCollection, toUserId);
 
-    const fromUserDoc = await transaction.get(fromUserRef);
-    const toUserDoc = await transaction.get(toUserRef);
-
-    if (!fromUserDoc.exists() || !toUserDoc.exists()) {
-      throw new Error('One or both users not found.');
-    }
-
-    const fromUserData = fromUserDoc.data() as UserProfile;
-    const toUserData = toUserDoc.data() as UserProfile;
+    transaction.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
 
     transaction.update(fromUserRef, {
-      friends: [...fromUserData.friends, toUserId],
-      friendRequestsSent: fromUserData.friendRequestsSent.filter(
-        id => id !== requestId,
-      ),
+      friendRequestsSent: arrayRemove(toUserId),
+      friends: arrayUnion(toUserId),
     });
 
     transaction.update(toUserRef, {
-      friends: [...toUserData.friends, fromUserId],
-      friendRequestsReceived: toUserData.friendRequestsReceived.filter(
-        id => id !== requestId,
-      ),
+      friendRequestsReceived: arrayRemove(fromUserId),
+      friends: arrayUnion(fromUserId),
+    });
+
+    const newFriendshipRef = doc(friendshipsCollection);
+    transaction.set(newFriendshipRef, {
+      user1Id: fromUserId,
+      user2Id: toUserId,
+      createdAt: serverTimestamp(),
+      user1ShareActivity: false,
+      user2ShareActivity: false,
     });
   });
 };
 
 // Deny a friend request
-export const denyFriendRequest = async (requestId: string): Promise<void> => {
-  const requestRef = doc(friendRequestsCollection, requestId);
-  const requestDoc = await getDoc(requestRef);
-
-  if (!requestDoc.exists()) {
-    throw new Error('Friend request not found.');
-  }
-  const { fromUserId, toUserId } = requestDoc.data() as FriendRequest;
-
+export const denyFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
   const batch = writeBatch(db);
 
-  // 1. Update request status to 'denied'
-  batch.update(requestRef, {
-    status: 'denied',
-    respondedAt: Timestamp.now(),
-  });
+  const requestRef = doc(friendRequestsCollection, requestId);
+  batch.update(requestRef, { status: 'denied', respondedAt: serverTimestamp() });
 
-  // 2. Remove request from both users' profiles
   const fromUserRef = doc(usersCollection, fromUserId);
-  const toUserRef = doc(usersCollection, toUserId);
-  const fromUserData = (await getDoc(fromUserRef)).data() as UserProfile;
-  const toUserData = (await getDoc(toUserRef)).data() as UserProfile;
+  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
 
-  batch.update(fromUserRef, {
-    friendRequestsSent: fromUserData.friendRequestsSent.filter(
-      id => id !== requestId,
-    ),
-  });
-  batch.update(toUserRef, {
-    friendRequestsReceived: toUserData.friendRequestsReceived.filter(
-      id => id !== requestId,
-    ),
-  });
+  const toUserRef = doc(usersCollection, toUserId);
+  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
 
   await batch.commit();
 };
 
 // Cancel a sent friend request
-export const cancelFriendRequest = async (requestId: string): Promise<void> => {
-  // This can be the same logic as denying, just initiated by the sender
-  await denyFriendRequest(requestId);
+export const cancelFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
+  const batch = writeBatch(db);
+
+  const requestRef = doc(friendRequestsCollection, requestId);
+  batch.delete(requestRef);
+
+  const fromUserRef = doc(usersCollection, fromUserId);
+  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
+
+  const toUserRef = doc(usersCollection, toUserId);
+  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
+
+  await batch.commit();
 };
 
 // Remove a friend
-export const removeFriend = async (
-  currentUserId: string,
-  friendUserId: string,
-): Promise<void> => {
-  await runTransaction(db, async transaction => {
-    // 1. Find the friendship document
+export const removeFriend = async (userId: string, friendId: string) => {
+  await runTransaction(db, async (transaction) => {
+    const userRef = doc(usersCollection, userId);
+    const friendRef = doc(usersCollection, friendId);
+
+    transaction.update(userRef, { friends: arrayRemove(friendId) });
+    transaction.update(friendRef, { friends: arrayRemove(userId) });
+
     const friendshipQuery = query(
       friendshipsCollection,
-      or(
-        where('user1Id', '==', currentUserId),
-        where('user2Id', '==', currentUserId),
-      ),
+      where('user1Id', 'in', [userId, friendId]),
+      where('user2Id', 'in', [userId, friendId])
     );
     const friendshipSnapshot = await getDocs(friendshipQuery);
-    const friendshipDoc = friendshipSnapshot.docs.find(
-      doc =>
-        (doc.data().user1Id === currentUserId &&
-          doc.data().user2Id === friendUserId) ||
-        (doc.data().user1Id === friendUserId &&
-          doc.data().user2Id === currentUserId),
-    );
-
-    if (!friendshipDoc) {
-      throw new Error('Friendship not found.');
-    }
-
-    // 2. Delete the friendship document
-    transaction.delete(friendshipDoc.ref);
-
-    // 3. Remove friend from each user's friend list
-    const currentUserRef = doc(usersCollection, currentUserId);
-    const friendUserRef = doc(usersCollection, friendUserId);
-
-    const currentUserDoc = await transaction.get(currentUserRef);
-    const friendUserDoc = await transaction.get(friendUserRef);
-
-    if (!currentUserDoc.exists() || !friendUserDoc.exists()) {
-      throw new Error('One or both users not found.');
-    }
-
-    const currentUserData = currentUserDoc.data() as UserProfile;
-    const friendUserData = friendUserDoc.data() as UserProfile;
-
-    transaction.update(currentUserRef, {
-      friends: currentUserData.friends.filter(id => id !== friendUserId),
-    });
-    transaction.update(friendUserRef, {
-      friends: friendUserData.friends.filter(id => id !== currentUserId),
+    friendshipSnapshot.forEach((doc) => {
+      transaction.delete(doc.ref);
     });
   });
 };
 
-// Get a user's friends with their public data
-export const getUserFriends = async (
-  userId: string,
-): Promise<PublicUserData[]> => {
+// Get user's friends with their public data
+export const getUserFriends = async (userId: string): Promise<PublicUserData[]> => {
   const userRef = doc(usersCollection, userId);
   const userDoc = await getDoc(userRef);
-
-  if (!userDoc.exists()) {
-    return [];
-  }
-
   const userData = userDoc.data() as UserProfile;
-  const friendIds = userData.friends;
 
-  if (friendIds.length === 0) {
+  if (!userData.friends || userData.friends.length === 0) {
     return [];
   }
 
-  const friendsQuery = query(usersCollection, where('__name__', 'in', friendIds));
+  const friendsQuery = query(usersCollection, where('__name__', 'in', userData.friends));
   const friendsSnapshot = await getDocs(friendsQuery);
 
-  return friendsSnapshot.docs.map(doc => {
+  return friendsSnapshot.docs.map((doc) => {
     const friendData = doc.data() as UserProfile;
     return {
       userId: doc.id,
@@ -285,118 +164,105 @@ export const getUserFriends = async (
   });
 };
 
-// Get pending friend requests (sent and received)
+// Get pending friend requests
 export const getPendingRequests = async (
-  userId: string,
-): Promise<{ sent: FriendRequest[]; received: FriendRequest[] }> => {
-  const userRef = doc(usersCollection, userId);
-  const userDoc = await getDoc(userRef);
+  userId: string
+): Promise<{
+  sent: FriendRequestWithRecipientData[];
+  received: FriendRequestWithRecipientData[];
+}> => {
+  const sentQuery = query(
+    friendRequestsCollection,
+    where('fromUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
+  const receivedQuery = query(
+    friendRequestsCollection,
+    where('toUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
 
-  if (!userDoc.exists()) {
-    return { sent: [], received: [] };
-  }
+  const [sentSnapshot, receivedSnapshot] = await Promise.all([
+    getDocs(sentQuery),
+    getDocs(receivedQuery),
+  ]);
 
-  const userData = userDoc.data() as UserProfile;
+  const sent = await Promise.all(
+    sentSnapshot.docs.map(async (docSnapshot) => {
+      const request = { id: docSnapshot.id, ...docSnapshot.data() } as FriendRequest;
+      const recipientDoc = await getDoc(doc(usersCollection, request.toUserId));
+      const recipientData = recipientDoc.data() as UserProfile;
+      return {
+        ...request,
+        recipientData: {
+          userId: recipientDoc.id,
+          displayName: recipientData.displayName,
+          friendId: recipientData.friendId,
+        },
+      };
+    })
+  );
 
-  const sentRequests: FriendRequest[] = [];
-  if (userData.friendRequestsSent.length > 0) {
-    const sentQuery = query(
-      friendRequestsCollection,
-      where('__name__', 'in', userData.friendRequestsSent),
-    );
-    const sentSnapshot = await getDocs(sentQuery);
-    sentSnapshot.forEach(doc => {
-      sentRequests.push(doc.data() as FriendRequest);
-    });
-  }
+  const received = await Promise.all(
+    receivedSnapshot.docs.map(async (docSnapshot) => {
+      const request = { id: docSnapshot.id, ...docSnapshot.data() } as FriendRequest;
+      const senderDoc = await getDoc(doc(usersCollection, request.fromUserId));
+      const senderData = senderDoc.data() as UserProfile;
+      return {
+        ...request,
+        recipientData: {
+          userId: senderDoc.id,
+          displayName: senderData.displayName,
+          friendId: senderData.friendId,
+        },
+      };
+    })
+  );
 
-  const receivedRequests: FriendRequest[] = [];
-  if (userData.friendRequestsReceived.length > 0) {
-    const receivedQuery = query(
-      friendRequestsCollection,
-      where('__name__', 'in', userData.friendRequestsReceived),
-    );
-    const receivedSnapshot = await getDocs(receivedQuery);
-    receivedSnapshot.forEach(doc => {
-      receivedRequests.push(doc.data() as FriendRequest);
-    });
-  }
-
-  return { sent: sentRequests, received: receivedRequests };
+  return { sent, received };
 };
 
-// Update activity sharing status with a friend
-export const updateActivitySharing = async (
-  currentUserId: string,
-  friendUserId: string,
-  share: boolean,
-): Promise<void> => {
+// Update activity sharing status
+export const updateActivitySharing = async (userId: string, friendId: string, share: boolean) => {
   const friendshipQuery = query(
     friendshipsCollection,
-    or(
-      where('user1Id', '==', currentUserId),
-      where('user2Id', '==', currentUserId),
-    ),
+    where('user1Id', 'in', [userId, friendId]),
+    where('user2Id', 'in', [userId, friendId])
   );
   const friendshipSnapshot = await getDocs(friendshipQuery);
-  const friendshipDoc = friendshipSnapshot.docs.find(
-    doc =>
-      (doc.data().user1Id === currentUserId &&
-        doc.data().user2Id === friendUserId) ||
-      (doc.data().user1Id === friendUserId &&
-        doc.data().user2Id === currentUserId),
-  );
+  const friendshipDoc = friendshipSnapshot.docs[0];
 
-  if (!friendshipDoc) {
-    throw new Error('Friendship not found.');
+  if (friendshipDoc) {
+    const friendshipData = friendshipDoc.data() as Friendship;
+    const updateField = friendshipData.user1Id === userId ? 'user1ShareActivity' : 'user2ShareActivity';
+
+    const batch = writeBatch(db);
+    batch.update(friendshipDoc.ref, { [updateField]: share });
+    await batch.commit();
   }
-
-  const friendship = friendshipDoc.data() as Friendship;
-  const updateData: Partial<Friendship> =
-    friendship.user1Id === currentUserId
-      ? { user1ShareActivity: share }
-      : { user2ShareActivity: share };
-
-  await writeBatch(db).update(friendshipDoc.ref, updateData).commit();
 };
 
-// Get friends who are sharing their activity with the current user
-export const getFriendsWithActivitySharing = async (
-  userId: string,
-): Promise<PublicUserData[]> => {
-  const friendshipsQuery = query(
-    friendshipsCollection,
-    or(where('user1Id', '==', userId), where('user2Id', '==', userId)),
-  );
+// Get friends who are sharing their activity
+export const getFriendsWithActivitySharing = async (userId: string): Promise<string[]> => {
+  const userRef = doc(usersCollection, userId);
+  const userDoc = await getDoc(userRef);
+  const userData = userDoc.data() as UserProfile;
 
-  const friendshipsSnapshot = await getDocs(friendshipsQuery);
-  const sharingFriendIds: string[] = [];
-
-  friendshipsSnapshot.forEach(doc => {
-    const fs = doc.data() as Friendship;
-    if (fs.user1Id === userId && fs.user2ShareActivity) {
-      sharingFriendIds.push(fs.user2Id);
-    } else if (fs.user2Id === userId && fs.user1ShareActivity) {
-      sharingFriendIds.push(fs.user1Id);
-    }
-  });
-
-  if (sharingFriendIds.length === 0) {
+  if (!userData.friends || userData.friends.length === 0) {
     return [];
   }
 
-  const friendsQuery = query(
-    usersCollection,
-    where('__name__', 'in', sharingFriendIds),
-  );
-  const friendsSnapshot = await getDocs(friendsQuery);
+  const friendshipsQuery1 = query(friendshipsCollection, where('user1Id', '==', userId), where('user2ShareActivity', '==', true));
+  const friendshipsQuery2 = query(friendshipsCollection, where('user2Id', '==', userId), where('user1ShareActivity', '==', true));
 
-  return friendsSnapshot.docs.map(doc => {
-    const friendData = doc.data() as UserProfile;
-    return {
-      userId: doc.id,
-      displayName: friendData.displayName,
-      friendId: friendData.friendId,
-    };
-  });
+  const [snapshot1, snapshot2] = await Promise.all([
+    getDocs(friendshipsQuery1),
+    getDocs(friendshipsQuery2),
+  ]);
+
+  const friendIds = new Set<string>();
+  snapshot1.forEach((doc) => friendIds.add((doc.data() as Friendship).user2Id));
+  snapshot2.forEach((doc) => friendIds.add((doc.data() as Friendship).user1Id));
+
+  return Array.from(friendIds);
 };

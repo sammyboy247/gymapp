@@ -9,6 +9,7 @@ import { SchedulePage } from '@/pages/SchedulePage';
 import { AdminPage } from '@/pages/AdminPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { HomePage } from '@/pages/HomePage';
+import SocialPage from '@/pages/SocialPage';
 
 function App() {
   // Initialize Firebase auth state listener
@@ -24,7 +25,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/profile" element={<ProfilePage />} />
-            
+          <Route path="/social" element={<SocialPage />} />
+
           {/* Admin-Only Route */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
             <Route path="/admin" element={<AdminPage />} />

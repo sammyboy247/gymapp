@@ -68,6 +68,10 @@ export interface FriendRequest {
   respondedAt?: Timestamp;
 }
 
+export interface FriendRequestWithRecipientData extends FriendRequest {
+  recipientData: PublicUserData;
+}
+
 export interface Friendship {
   id: string;
   user1Id: string;
