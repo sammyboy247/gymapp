@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { scheduleService } from '@/services/firebase/scheduleService';
-import type { Schedule, Booking } from '@/types';
+import { getFriendsWithActivitySharing } from '@/services/firebase/friendService';
+import type { Schedule, Booking, UserProfile } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { BookingModal } from './BookingModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { FriendActivityBadge } from './FriendActivityBadge';
 
 export const ScheduleView: React.FC = () => {
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthStore();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
-  const [friendBookings, setFriendBookings] = useState<Booking[]>([]);
+  const [friendActivityMap, setFriendActivityMap] = useState<Record<string, UserProfile[]>>({});
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
@@ -35,21 +37,54 @@ export const ScheduleView: React.FC = () => {
 
     if (userId) {
       const unsubscribeBookings = scheduleService.getUserBookings(userId, setUserBookings);
-      const unsubscribeFriendBookings = scheduleService.getFriendBookings(
-        userProfile?.friends || [],
-        setFriendBookings
-      );
       return () => {
         unsubscribeSchedules();
         unsubscribeBookings();
-        unsubscribeFriendBookings();
       };
     }
 
     return () => {
       unsubscribeSchedules();
     };
-  }, [filter.startDate, filter.endDate, filter.sessionType, userId, userProfile?.friends]);
+  }, [filter.startDate, filter.endDate, filter.sessionType, userId]);
+
+  // Load friend activity for each session (privacy-first: only friends with activity sharing enabled)
+  useEffect(() => {
+    if (!userId || schedules.length === 0) {
+      return;
+    }
+
+    const loadFriendActivity = async () => {
+      try {
+        // Get friends who have activity sharing enabled
+        const friendIds = await getFriendsWithActivitySharing(userId);
+
+        if (friendIds.length === 0) {
+          setFriendActivityMap({});
+          return;
+        }
+
+        // Load friend activity for each session
+        const activityMap: Record<string, UserProfile[]> = {};
+
+        for (const session of schedules) {
+          const friendsInSession = await scheduleService.getFriendActivityForSession(
+            session.id,
+            friendIds
+          );
+          if (friendsInSession.length > 0) {
+            activityMap[session.id] = friendsInSession;
+          }
+        }
+
+        setFriendActivityMap(activityMap);
+      } catch (err) {
+        console.error('Error loading friend activity:', err);
+      }
+    };
+
+    loadFriendActivity();
+  }, [userId, schedules]);
 
   const handleSessionClick = (session: Schedule) => {
     if (session.spotsRemaining > 0 || isUserBooked(session.id)) {
@@ -121,9 +156,7 @@ export const ScheduleView: React.FC = () => {
               {isUserBooked(session.id) && (
                 <p className="text-blue-600 font-semibold mt-2">✓ Booked</p>
               )}
-              {friendBookings.some(b => b.sessionId === session.id) && (
-                <p className="text-green-600 font-semibold mt-2">👥 Friend is going</p>
-              )}
+              <FriendActivityBadge friends={friendActivityMap[session.id] || []} />
             </div>
           ))}
         </div>

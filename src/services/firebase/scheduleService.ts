@@ -180,6 +180,39 @@ const getFriendBookings = (friendIds: string[], callback: (bookings: Booking[]) 
   });
 };
 
+// Get friend activity for a specific session (returns array of friend user profiles)
+const getFriendActivityForSession = async (sessionId: string, friendIds: string[]): Promise<UserProfile[]> => {
+  if (friendIds.length === 0) {
+    return [];
+  }
+
+  // Get bookings for this session by friends
+  const q = query(
+    collection(db, 'bookings'),
+    where('sessionId', '==', sessionId),
+    where('userId', 'in', friendIds),
+    where('status', '==', 'active')
+  );
+
+  const bookingsSnapshot = await getDocs(q);
+  const friendUserIds = bookingsSnapshot.docs.map(doc => (doc.data() as Booking).userId);
+
+  if (friendUserIds.length === 0) {
+    return [];
+  }
+
+  // Get user profiles for friends in this session
+  const userProfiles: UserProfile[] = [];
+  for (const userId of friendUserIds) {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      userProfiles.push({ id: userDoc.id, ...userDoc.data() } as UserProfile);
+    }
+  }
+
+  return userProfiles;
+};
+
 // ADMIN FUNCTIONS
 
 // Create a new schedule session
@@ -322,6 +355,7 @@ export const scheduleService = {
   checkSessionCapacity,
   getSessionBookings,
   getFriendBookings,
+  getFriendActivityForSession,
   // Admin functions
   createSchedule,
   updateSchedule,
