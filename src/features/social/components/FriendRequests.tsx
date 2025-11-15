@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { getPendingRequests, acceptFriendRequest, denyFriendRequest, cancelFriendRequest } from '@/services/firebase/friendService';
 import { useAuthStore } from '@/store/authStore';
 import type { FriendRequestWithRecipientData } from '@/types';
@@ -28,19 +29,34 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({ onRequestsUpdate
   }, [user, requestsUpdated]);
 
   const handleAccept = async (request: FriendRequestWithRecipientData) => {
-    await acceptFriendRequest(request.id, request.fromUserId, request.toUserId);
-    onRequestsUpdated();
-    fetchRequests();
+    try {
+      await acceptFriendRequest(request.id, request.fromUserId, request.toUserId);
+      toast.success(`Friend request from ${request.recipientData.displayName} accepted`);
+      onRequestsUpdated();
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to accept friend request');
+    }
   };
 
   const handleDeny = async (request: FriendRequestWithRecipientData) => {
-    await denyFriendRequest(request.id, request.fromUserId, request.toUserId);
-    fetchRequests();
+    try {
+      await denyFriendRequest(request.id, request.fromUserId, request.toUserId);
+      toast.success('Friend request denied');
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to deny friend request');
+    }
   };
 
   const handleCancel = async (request: FriendRequestWithRecipientData) => {
-    await cancelFriendRequest(request.id, request.fromUserId, request.toUserId);
-    fetchRequests();
+    try {
+      await cancelFriendRequest(request.id, request.fromUserId, request.toUserId);
+      toast.success('Friend request cancelled');
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to cancel friend request');
+    }
   };
 
   if (loading) {

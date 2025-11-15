@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { toast } from 'sonner';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,14 +57,20 @@ export const ProgramFormModal: React.FC<Props> = ({
   }, [program, reset]);
 
   const onSubmit = async (data: Program) => {
-    if (program) {
-      await programService.updateProgram(program.id, data);
-      onSave({ ...data, id: program.id });
-    } else {
-      const newProgramId = await programService.createProgram(data);
-      onSave({ ...data, id: newProgramId });
+    try {
+      if (program) {
+        await programService.updateProgram(program.id, data);
+        toast.success('Program updated successfully');
+        onSave({ ...data, id: program.id });
+      } else {
+        const newProgramId = await programService.createProgram(data);
+        toast.success('Program created successfully');
+        onSave({ ...data, id: newProgramId });
+      }
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save program');
     }
-    onClose();
   };
 
   return (

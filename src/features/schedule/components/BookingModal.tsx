@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { scheduleService } from '@/services/firebase/scheduleService';
 import { userService } from '@/services/firebase/userService';
 import type { Schedule, Booking, ProgramAssignment } from '@/types';
@@ -30,9 +31,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
     setError(null);
     try {
       await scheduleService.bookSession(session.id, user.uid, selectedProgramId);
+      toast.success('Session booked successfully!');
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message || 'Failed to book session';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -46,10 +50,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
       const booking = userBookings.find(b => b.sessionId === session.id);
       if (booking) {
         await scheduleService.cancelBooking(booking.id, session.id, user.uid);
+        toast.success('Booking cancelled successfully');
       }
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.message || 'Failed to cancel booking';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

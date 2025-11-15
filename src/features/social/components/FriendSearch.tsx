@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { searchByFriendId, sendFriendRequest } from '@/services/firebase/friendService';
 import type { PublicUserData } from '@/types';
 import { useAuthStore } from '@/store/authStore';
@@ -40,11 +41,14 @@ export const FriendSearch: React.FC<FriendSearchProps> = ({ onFriendRequestSent 
     setIsRequesting(true);
     try {
       await sendFriendRequest(user.uid, searchResult.userId);
+      toast.success(`Friend request sent to ${searchResult.displayName}`);
       setSearchResult(null);
       setFriendId('');
       onFriendRequestSent();
-    } catch (err) {
-      setError('Failed to send friend request.');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to send friend request';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsRequesting(false);
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
 import { scheduleService } from '@/services/firebase/scheduleService';
@@ -113,13 +114,17 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
 
       if (schedule && schedule.id) {
         await scheduleService.updateSchedule(schedule.id, dataToSave);
+        toast.success('Session updated successfully');
       } else {
         await scheduleService.createSchedule(dataToSave as Omit<Schedule, 'id'>);
+        toast.success('Session created successfully');
       }
       onSave();
       onClose();
-    } catch (err) {
-      setError('Failed to save session. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to save session. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       console.error(err);
     } finally {
       setIsLoading(false);

@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import { userService } from '@/services/firebase/userService';
 
@@ -10,9 +11,16 @@ export const PrivacySettings: React.FC = () => {
     if (user?.uid) {
       const newSharingStatus = !isSharing;
       setIsSharing(newSharingStatus);
-      await userService.updateActivitySharing(user.uid, newSharingStatus);
-      if (userProfile) {
-        setUserProfile({ ...userProfile, shareActivity: newSharingStatus });
+      try {
+        await userService.updateActivitySharing(user.uid, newSharingStatus);
+        if (userProfile) {
+          setUserProfile({ ...userProfile, shareActivity: newSharingStatus });
+        }
+        toast.success(newSharingStatus ? 'Activity sharing enabled' : 'Activity sharing disabled');
+      } catch (error: any) {
+        // Rollback on error
+        setIsSharing(!newSharingStatus);
+        toast.error(error.message || 'Failed to update privacy settings');
       }
     }
   };

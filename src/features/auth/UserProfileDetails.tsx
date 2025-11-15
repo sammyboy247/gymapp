@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import { userService } from '@/services/firebase/userService';
 
@@ -18,9 +19,12 @@ export const UserProfileDetails: React.FC = () => {
         setError(null);
         await userService.updateDisplayName(user.uid, displayName);
         setUserProfile({ ...userProfile, displayName });
+        toast.success('Display name updated successfully');
         setIsEditing(false);
-      } catch (err) {
-        setError('Failed to update display name.');
+      } catch (err: any) {
+        const errorMessage = err.message || 'Failed to update display name';
+        setError(errorMessage);
+        toast.error(errorMessage);
         console.error(err);
       }
     }
