@@ -201,16 +201,15 @@ const getFriendActivityForSession = async (sessionId: string, friendIds: string[
     return [];
   }
 
-  // Get user profiles for friends in this session
-  const userProfiles: UserProfile[] = [];
-  for (const userId of friendUserIds) {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (userDoc.exists()) {
-      userProfiles.push({ id: userDoc.id, ...userDoc.data() } as UserProfile);
-    }
-  }
+  // ✅ OPTIMIZED: Parallel reads instead of sequential
+  const userPromises = friendUserIds.map(userId =>
+    getDoc(doc(db, 'users', userId))
+  );
+  const userDocs = await Promise.all(userPromises);
 
-  return userProfiles;
+  return userDocs
+    .filter(doc => doc.exists())
+    .map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
 };
 
 // ADMIN FUNCTIONS

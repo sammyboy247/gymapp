@@ -4,7 +4,7 @@ import type { Schedule } from '@/types';
 import SessionFormModal from './SessionFormModal';
 import RosterModal from './RosterModal';
 import { Plus, Edit, Trash2, Users, AlertCircle } from 'lucide-react';
-import moment from 'moment';
+import { format } from 'date-fns';
 
 export const ScheduleManager: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -54,7 +54,7 @@ export const ScheduleManager: React.FC = () => {
   };
 
   const handleDelete = async (schedule: Schedule) => {
-    if (window.confirm(`Are you sure you want to delete the session "${schedule.sessionType}" on ${moment(schedule.startTime.toDate()).format('MMM D, h:mm a')}?`)) {
+    if (window.confirm(`Are you sure you want to delete the session "${schedule.sessionType}" on ${format(schedule.startTime.toDate(), 'MMM d, h:mm a')}?`)) {
       try {
         await scheduleService.deleteSchedule(schedule.id);
         // Real-time listener will update the list automatically
@@ -146,10 +146,10 @@ export const ScheduleManager: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {moment(schedule.startTime.toDate()).format('MMM D, YYYY')}
+                      {format(schedule.startTime.toDate(), 'MMM d, yyyy')}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {moment(schedule.startTime.toDate()).format('h:mm a')} - {moment(schedule.endTime.toDate()).format('h:mm a')}
+                      {format(schedule.startTime.toDate(), 'h:mm a')} - {format(schedule.endTime.toDate(), 'h:mm a')}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

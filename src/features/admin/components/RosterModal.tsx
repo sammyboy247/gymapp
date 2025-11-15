@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { scheduleService } from '@/services/firebase/scheduleService';
 import type { Schedule, Booking } from '@/types';
 import { X, Trash2, UserPlus, AlertCircle, Download } from 'lucide-react';
-import moment from 'moment';
+import { format } from 'date-fns';
 
 interface RosterItem extends Booking {
   memberDisplayName: string;
@@ -70,13 +70,13 @@ const RosterModal: React.FC<RosterModalProps> = ({ isOpen, onClose, schedule }) 
   const exportToCSV = () => {
     const headers = "Member Name,Email,Booking Time\n";
     const rows = roster.map(r =>
-        `"${r.memberDisplayName}","${r.memberEmail}","${moment(r.bookedAt.toDate()).format('YYYY-MM-DD HH:mm')}"`
+        `"${r.memberDisplayName}","${r.memberEmail}","${format(r.bookedAt.toDate(), 'yyyy-MM-dd HH:mm')}"`
     ).join('\n');
     const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `roster_${schedule.sessionType}_${moment(schedule.startTime.toDate()).format('YYYYMMDD')}.csv`);
+    link.setAttribute("download", `roster_${schedule.sessionType}_${format(schedule.startTime.toDate(), 'yyyyMMdd')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -92,7 +92,7 @@ const RosterModal: React.FC<RosterModalProps> = ({ isOpen, onClose, schedule }) 
         </button>
         <h2 className="text-2xl font-semibold mb-2">Roster for {schedule.sessionType}</h2>
         <p className="text-sm text-gray-500 mb-4">
-            {moment(schedule.startTime.toDate()).format('MMMM Do YYYY, h:mm a')}
+            {format(schedule.startTime.toDate(), 'MMMM do yyyy, h:mm a')}
         </p>
 
         <div className="flex justify-between items-center mb-4">
@@ -134,7 +134,7 @@ const RosterModal: React.FC<RosterModalProps> = ({ isOpen, onClose, schedule }) 
                         <div className="text-sm font-medium text-gray-900">{booking.memberDisplayName}</div>
                         <div className="text-sm text-gray-500">{booking.memberEmail}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{moment(booking.bookedAt.toDate()).format('MMM D, h:mm a')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{format(booking.bookedAt.toDate(), 'MMM d, h:mm a')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => handleRemoveBooking(booking.id)} className="text-red-600 hover:text-red-900">
                         <Trash2 size={18} />

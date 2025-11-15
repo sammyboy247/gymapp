@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Pipeline Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="mt-4">Dev Pipeline Dashboard</h1>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Task List
+                    </div>
+                    <div class="card-body" id="tasklist">
+                        <!-- Content from tasklist.md will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Action Queue
+                    </div>
+                    <div class="card-body" id="action-queue">
+                        <!-- Content from ACTION-QUEUE.md will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Status Report
+                    </div>
+                    <div class="card-body" id="status-report">
+                        <!-- Content from STATUS-REPORT.md will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        Multi-Agent Workflow Specification
+                    </div>
+                    <div class="card-body" id="workflow-spec">
+                        <!-- Content from MULTI-AGENT-WORKFLOW-SPECIFICATION.md will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

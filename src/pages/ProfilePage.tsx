@@ -4,7 +4,7 @@ import { UserProfileDetails } from '@/features/auth/UserProfileDetails';
 import { MyPrograms } from '@/features/profile/MyPrograms';
 import { PrivacySettings } from '@/features/profile/PrivacySettings';
 
-export const ProfilePage: React.FC = () => {
+const ProfilePage: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">My Profile</h1>
@@ -21,3 +21,5 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
+
+export default ProfilePage;

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-export const SessionCardSkeleton: React.FC = () => {
+export const SessionCardSkeleton: React.FC = memo(() => {
   return (
     <div className="p-4 border rounded-lg bg-zinc-100 animate-pulse">
       <div className="h-6 bg-zinc-300 rounded w-3/4 mb-2"></div>
@@ -9,4 +9,6 @@ export const SessionCardSkeleton: React.FC = () => {
       <div className="h-4 bg-zinc-300 rounded w-1/4"></div>
     </div>
   );
-};
+});
+
+SessionCardSkeleton.displayName = 'SessionCardSkeleton';

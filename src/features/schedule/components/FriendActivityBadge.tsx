@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Users } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
@@ -6,7 +6,7 @@ interface FriendActivityBadgeProps {
   friends: UserProfile[];
 }
 
-export const FriendActivityBadge: React.FC<FriendActivityBadgeProps> = ({ friends }) => {
+export const FriendActivityBadge: React.FC<FriendActivityBadgeProps> = memo(({ friends }) => {
   const [expanded, setExpanded] = useState(false);
 
   if (friends.length === 0) {
@@ -38,4 +38,6 @@ export const FriendActivityBadge: React.FC<FriendActivityBadgeProps> = ({ friend
       )}
     </div>
   );
-};
+});
+
+FriendActivityBadge.displayName = 'FriendActivityBadge';

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 
-export const HomePage: React.FC = () => {
+const HomePage: React.FC = () => {
   const { userProfile } = useAuthStore();
   return (
     <div className="bg-white p-8 rounded-lg shadow-md">
@@ -19,3 +19,5 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
+
+export default HomePage;
