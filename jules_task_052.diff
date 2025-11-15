@@ -1,0 +1,167 @@
+diff --git a/src/features/schedule/components/BookingModal.tsx b/src/features/schedule/components/BookingModal.tsx
+index 2e11061..516ec6c 100644
+--- a/src/features/schedule/components/BookingModal.tsx
++++ b/src/features/schedule/components/BookingModal.tsx
+@@ -8,10 +8,18 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
+ interface BookingModalProps {
+   session: Schedule;
+   userBookings: Booking[];
++  setUserBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
++  setBookingError: (error: string | null) => void;
+   onClose: () => void;
+ }
+ 
+-export const BookingModal: React.FC<BookingModalProps> = ({ session, userBookings, onClose }) => {
++export const BookingModal: React.FC<BookingModalProps> = ({
++  session,
++  userBookings,
++  setUserBookings,
++  setBookingError,
++  onClose,
++}) => {
+   const { user } = useAuthStore();
+   const [selectedProgramId, setSelectedProgramId] = useState<string>(session.defaultProgramId || 'default');
+   const [userPrograms, setUserPrograms] = useState<ProgramAssignment[]>([]);
+@@ -26,32 +34,43 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
+ 
+   const handleBooking = async () => {
+     if (!user) return;
+-    setLoading(true);
+-    setError(null);
++
++    const tempBooking: Booking = {
++      id: `temp-${Date.now()}`,
++      sessionId: session.id,
++      userId: user.uid,
++      programId: selectedProgramId,
++      createdAt: new Date(),
++    };
++
++    setUserBookings(prev => [...prev, tempBooking]);
++    onClose();
++
+     try {
+       await scheduleService.bookSession(session.id, user.uid, selectedProgramId);
+-      onClose();
++      setBookingError(null);
+     } catch (err: any) {
+-      setError(err.message);
+-    } finally {
+-      setLoading(false);
++      setBookingError(`Booking failed: ${err.message}. Please try again.`);
++      setUserBookings(prev => prev.filter(b => b.id !== tempBooking.id));
+     }
+   };
+ 
+   const handleCancelBooking = async () => {
+     if (!user) return;
+-    setLoading(true);
+-    setError(null);
++
++    const bookingToCancel = userBookings.find(b => b.sessionId === session.id);
++    if (!bookingToCancel) return;
++
++    const originalBookings = userBookings;
++    setUserBookings(prev => prev.filter(b => b.id !== bookingToCancel.id));
++    onClose();
++
+     try {
+-      const booking = userBookings.find(b => b.sessionId === session.id);
+-      if (booking) {
+-        await scheduleService.cancelBooking(booking.id, session.id, user.uid);
+-      }
+-      onClose();
++      await scheduleService.cancelBooking(bookingToCancel.id, session.id, user.uid);
++      setBookingError(null);
+     } catch (err: any) {
+-      setError(err.message);
+-    } finally {
+-      setLoading(false);
++      setBookingError(`Cancellation failed: ${err.message}. Please try again.`);
++      setUserBookings(originalBookings);
+     }
+   };
+ 
+diff --git a/src/features/schedule/components/ScheduleView.tsx b/src/features/schedule/components/ScheduleView.tsx
+index 4a0b010..64fda58 100644
+--- a/src/features/schedule/components/ScheduleView.tsx
++++ b/src/features/schedule/components/ScheduleView.tsx
+@@ -4,8 +4,8 @@ import { getFriendsWithActivitySharing } from '@/services/firebase/friendService
+ import type { Schedule, Booking, UserProfile } from '@/types';
+ import { useAuthStore } from '@/store/authStore';
+ import { BookingModal } from './BookingModal';
+-import { LoadingSpinner } from '@/components/LoadingSpinner';
+ import { FriendActivityBadge } from './FriendActivityBadge';
++import { SessionCardSkeleton } from './SessionCardSkeleton';
+ 
+ export const ScheduleView: React.FC = () => {
+   const { user } = useAuthStore();
+@@ -13,7 +13,7 @@ export const ScheduleView: React.FC = () => {
+   const [userBookings, setUserBookings] = useState<Booking[]>([]);
+   const [friendActivityMap, setFriendActivityMap] = useState<Record<string, UserProfile[]>>({});
+   const [loading, setLoading] = useState(true);
+-  const [error] = useState<string | null>(null);
++  const [bookingError, setBookingError] = useState<string | null>(null);
+   const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
+   const [filter, setFilter] = useState({
+     startDate: new Date(),
+@@ -122,14 +122,15 @@ export const ScheduleView: React.FC = () => {
+         </div>
+       </div>
+ 
+-      {loading && (
+-        <div className="flex justify-center items-center py-8">
+-          <LoadingSpinner />
+-        </div>
+-      )}
+-      {error && <p className="text-red-500">{error}</p>}
++      {bookingError && <p className="text-red-500">{bookingError}</p>}
+ 
+-      {!loading && !error && (
++      {loading ? (
++        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
++          {Array.from({ length: 6 }).map((_, index) => (
++            <SessionCardSkeleton key={index} />
++          ))}
++        </div>
++      ) : (
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+           {schedules.map(session => (
+             <div
+@@ -162,7 +163,7 @@ export const ScheduleView: React.FC = () => {
+         </div>
+       )}
+ 
+-      {!loading && !error && schedules.length === 0 && (
++      {!loading && schedules.length === 0 && (
+         <div className="text-center py-8 text-gray-500">
+           No classes scheduled for the selected period.
+         </div>
+@@ -173,6 +174,8 @@ export const ScheduleView: React.FC = () => {
+           session={selectedSession}
+           onClose={() => setSelectedSession(null)}
+           userBookings={userBookings}
++          setUserBookings={setUserBookings}
++          setBookingError={setBookingError}
+         />
+       )}
+     </div>
+diff --git a/src/features/schedule/components/SessionCardSkeleton.tsx b/src/features/schedule/components/SessionCardSkeleton.tsx
+new file mode 100644
+index 0000000..7593cb0
+--- /dev/null
++++ b/src/features/schedule/components/SessionCardSkeleton.tsx
+@@ -0,0 +1,12 @@
++import React from 'react';
++
++export const SessionCardSkeleton: React.FC = () => {
++  return (
++    <div className="p-4 border rounded-lg bg-zinc-100 animate-pulse">
++      <div className="h-6 bg-zinc-300 rounded w-3/4 mb-2"></div>
++      <div className="h-4 bg-zinc-300 rounded w-1/2 mb-2"></div>
++      <div className="h-4 bg-zinc-300 rounded w-1/3 mb-4"></div>
++      <div className="h-4 bg-zinc-300 rounded w-1/4"></div>
++    </div>
++  );
++};
+

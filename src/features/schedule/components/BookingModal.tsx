@@ -4,20 +4,25 @@ import { scheduleService } from '@/services/firebase/scheduleService';
 import { userService } from '@/services/firebase/userService';
 import type { Schedule, Booking, ProgramAssignment } from '@/types';
 import { useAuthStore } from '@/store/authStore';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface BookingModalProps {
   session: Schedule;
   userBookings: Booking[];
+  setUserBookings: React.Dispatch<React.SetStateAction<Booking[]>>;
+  setBookingError: (error: string | null) => void;
   onClose: () => void;
 }
 
-export const BookingModal: React.FC<BookingModalProps> = ({ session, userBookings, onClose }) => {
+export const BookingModal: React.FC<BookingModalProps> = ({
+  session,
+  userBookings,
+  setUserBookings,
+  setBookingError,
+  onClose,
+}) => {
   const { user } = useAuthStore();
   const [selectedProgramId, setSelectedProgramId] = useState<string>(session.defaultProgramId || 'default');
   const [userPrograms, setUserPrograms] = useState<ProgramAssignment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -27,38 +32,54 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
 
   const handleBooking = async () => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
+
+    // Optimistic UI update
+    const tempBooking: Booking = {
+      id: `temp-${Date.now()}`,
+      sessionId: session.id,
+      userId: user.uid,
+      programId: selectedProgramId,
+      bookedAt: { toDate: () => new Date() } as any, // Temporary timestamp
+      status: 'active',
+    };
+
+    setUserBookings(prev => [...prev, tempBooking]);
+    onClose();
+
     try {
       await scheduleService.bookSession(session.id, user.uid, selectedProgramId);
       toast.success('Session booked successfully!');
-      onClose();
+      setBookingError(null);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to book session';
-      setError(errorMessage);
+      setBookingError(`Booking failed: ${errorMessage}. Please try again.`);
       toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+      // Rollback optimistic update
+      setUserBookings(prev => prev.filter(b => b.id !== tempBooking.id));
     }
   };
 
   const handleCancelBooking = async () => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
+
+    const bookingToCancel = userBookings.find(b => b.sessionId === session.id);
+    if (!bookingToCancel) return;
+
+    // Optimistic UI update
+    const originalBookings = userBookings;
+    setUserBookings(prev => prev.filter(b => b.id !== bookingToCancel.id));
+    onClose();
+
     try {
-      const booking = userBookings.find(b => b.sessionId === session.id);
-      if (booking) {
-        await scheduleService.cancelBooking(booking.id, session.id, user.uid);
-        toast.success('Booking cancelled successfully');
-      }
-      onClose();
+      await scheduleService.cancelBooking(bookingToCancel.id, session.id, user.uid);
+      toast.success('Booking cancelled successfully');
+      setBookingError(null);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to cancel booking';
-      setError(errorMessage);
+      setBookingError(`Cancellation failed: ${errorMessage}. Please try again.`);
       toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+      // Rollback optimistic update
+      setUserBookings(originalBookings);
     }
   };
 
@@ -95,8 +116,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
           </div>
         )}
 
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-
         <div className="mt-6 flex justify-end gap-4">
           <button onClick={onClose} className="py-2 px-4 rounded bg-zinc-200 hover:bg-zinc-300">
             Close
@@ -104,18 +123,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({ session, userBooking
           {!isBooked ? (
             <button
               onClick={handleBooking}
-              disabled={loading || session.spotsRemaining <= 0}
-              className="py-2 px-4 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center"
+              disabled={session.spotsRemaining <= 0}
+              className="py-2 px-4 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
             >
-              {loading ? <LoadingSpinner /> : 'Book Session'}
+              Book Session
             </button>
           ) : (
             <button
               onClick={handleCancelBooking}
-              disabled={loading}
-              className="py-2 px-4 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300 flex items-center justify-center"
+              className="py-2 px-4 rounded bg-red-600 text-white hover:bg-red-700"
             >
-              {loading ? <LoadingSpinner /> : 'Cancel Booking'}
+              Cancel Booking
             </button>
           )}
         </div>

@@ -4,8 +4,8 @@ import { getFriendsWithActivitySharing } from '@/services/firebase/friendService
 import type { Schedule, Booking, UserProfile } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { BookingModal } from './BookingModal';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { FriendActivityBadge } from './FriendActivityBadge';
+import { SessionCardSkeleton } from './SessionCardSkeleton';
 
 export const ScheduleView: React.FC = () => {
   const { user } = useAuthStore();
@@ -13,7 +13,7 @@ export const ScheduleView: React.FC = () => {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [friendActivityMap, setFriendActivityMap] = useState<Record<string, UserProfile[]>>({});
   const [loading, setLoading] = useState(true);
-  const [error] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Schedule | null>(null);
   const [filter, setFilter] = useState({
     startDate: new Date(),
@@ -122,14 +122,15 @@ export const ScheduleView: React.FC = () => {
         </div>
       </div>
 
-      {loading && (
-        <div className="flex justify-center items-center py-8">
-          <LoadingSpinner />
-        </div>
-      )}
-      {error && <p className="text-red-500">{error}</p>}
+      {bookingError && <p className="text-red-500">{bookingError}</p>}
 
-      {!loading && !error && (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SessionCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedules.map(session => (
             <div
@@ -162,7 +163,7 @@ export const ScheduleView: React.FC = () => {
         </div>
       )}
 
-      {!loading && !error && schedules.length === 0 && (
+      {!loading && schedules.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           No classes scheduled for the selected period.
         </div>
@@ -173,6 +174,8 @@ export const ScheduleView: React.FC = () => {
           session={selectedSession}
           onClose={() => setSelectedSession(null)}
           userBookings={userBookings}
+          setUserBookings={setUserBookings}
+          setBookingError={setBookingError}
         />
       )}
     </div>

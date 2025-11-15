@@ -20,7 +20,8 @@
       "Bash(jules_task_038.diff)",
       "Bash(jules_task_039.diff)",
       "Bash(jules_task_041.diff)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(jules_task_052.diff)"
     ],
     "deny": [],
     "ask": []
