@@ -74,8 +74,8 @@ export const ProgramFormModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-semibold mb-4">
           {program ? 'Edit Program' : 'Create Program'}
         </h2>

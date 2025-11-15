@@ -86,8 +86,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const isBooked = userBookings.some(b => b.sessionId === session.id);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">{session.sessionType}</h2>
         <p className="text-gray-700">{session.startTime.toDate().toLocaleString()}</p>
         <p className="text-gray-700">Coach: {session.coachName}</p>
