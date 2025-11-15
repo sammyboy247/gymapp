@@ -564,29 +564,35 @@ _5 of 6 feature tasks complete - TASK-040 requires attention_
 ---
 
 ### TASK-049: Create Firestore Rules for PoC Features
-**Agent:** Gemini
-**Status:** PENDING
+**Agent:** Gemini (completed earlier)
+**Status:** COMPLETE ✅
 **Dependencies:** TASK-048 complete
 **Estimated Duration:** 20-30 minutes
 
 **Description:**
 Update firestore.rules with security rules for schedules, bookings, programs, and friend system.
 
-**Rules Required:**
-- schedules collection (read: all auth, write: admin/coach)
-- bookings collection (read: own bookings, write: own + capacity check)
-- programs collection (read: all auth, write: admin/coach)
-- programAssignments (read: own + admin, write: admin/coach)
-- friendRequests (read: own, write: own with validation)
-- friendships (read: participants only, write: validated)
+**Completion Details:**
+- Commit: dbf54ac
+- File: firestore.rules (143 lines)
+- All required collections covered with production-ready rules
 
-**Instructions:**
-1. Edit firestore.rules
-2. Test rules locally if possible
-3. Commit with message: "feat: add Firestore security rules for PoC features"
+**Rules Implemented:**
+- ✅ schedules collection (read: all auth, write: admin/coach)
+- ✅ bookings collection (read: own bookings, write: own + admin/coach)
+- ✅ programs collection (read: all auth, write: admin/coach)
+- ✅ programAssignments (read: own + admin/coach, write: admin/coach)
+- ✅ friendRequests (read: participants, write: validated sender, update: recipient, delete: sender)
+- ✅ friendships (read: participants only, write: validated participants, update: own activity sharing)
+
+**Features:**
+- Helper functions for role checking (isAdmin, isCoach, isAdminOrCoach)
+- Privacy-first: friendships only readable by participants
+- Activity sharing: users can only update their own preference
+- Admin override: admins/coaches have elevated permissions where appropriate
 
 **Result:**
-_Pending Phase 3 completion_
+✅ COMPLETE - Production-ready Firestore security rules implemented
 
 ---
 
@@ -1337,3 +1343,1061 @@ _Application ready for production deployment_
 
 ---
 
+
+## 🚀 PHASE 5: POST-DEPLOYMENT & ADVANCED FEATURES (PLANNED)
+
+**Status:** Planned - Ready after Phase 4 completion and initial production deployment
+**Total Tasks:** 15
+**Purpose:** Production monitoring, user feedback integration, and feature enhancements beyond PoC
+
+---
+
+### TASK-063: Production Deployment & Initial Launch
+**Agent:** Gemini
+**Alternative Agents:** Manual oversight required
+**Status:** PLANNED
+**Dependencies:** TASK-062 (Phase 4 complete)
+**Estimated Duration:** 60-90 minutes
+**Priority:** CRITICAL - Go-live
+
+**Description:**
+Execute production deployment, configure monitoring, and perform initial smoke tests with real users.
+
+**Deployment Steps:**
+1. **Final Pre-Deployment Verification**
+   - All tests passing
+   - Security audit complete
+   - UAT sign-off received
+   - Backup plan documented
+
+2. **Firebase Deployment**
+   ```bash
+   firebase deploy --only firestore:rules
+   firebase deploy --only hosting
+   ```
+
+3. **Seed Production Data**
+   - Run seed script for initial data
+   - Create first admin accounts
+   - Set up test member accounts
+
+4. **Monitoring Setup**
+   - Enable Firebase Performance Monitoring
+   - Configure error tracking
+   - Set up uptime monitoring
+   - Configure billing alerts
+
+5. **Initial Testing**
+   - Test all critical paths in production
+   - Verify Firebase rules working
+   - Check authentication flow
+   - Test booking workflow
+   - Verify admin functions
+
+**Verification Criteria:**
+- [ ] Application accessible at production URL
+- [ ] All features functional in production
+- [ ] Monitoring showing data
+- [ ] No critical errors in console
+- [ ] Authentication working
+- [ ] Database operations successful
+
+**Rollback Plan:**
+- Previous hosting deployment available
+- Database backup taken before deployment
+- Rollback procedure documented
+
+**Result:**
+_Pending Phase 4 completion_
+
+---
+
+### TASK-064: Set Up Error Tracking & Analytics
+**Agent:** Gemini or Claude Desktop
+**Alternative Agents:** Jules if implementing custom analytics
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 30-45 minutes
+**Priority:** HIGH - Production monitoring
+
+**Description:**
+Implement comprehensive error tracking and user analytics for production monitoring.
+
+**Tools to Integrate:**
+1. **Sentry or Firebase Crashlytics**
+   - Error tracking and reporting
+   - User context on errors
+   - Performance monitoring
+   - Release tracking
+
+2. **Google Analytics 4 or Firebase Analytics**
+   - User behavior tracking
+   - Feature usage metrics
+   - User flow analysis
+   - Conversion tracking
+
+3. **Custom Dashboard** (Optional)
+   - Key metrics visualization
+   - Daily active users
+   - Booking rates
+   - Error rates
+
+**Key Metrics to Track:**
+- Daily/Weekly/Monthly Active Users
+- Booking conversion rate
+- Friend request acceptance rate
+- Most used features
+- Error frequency by type
+- Page load times
+- User retention
+
+**Privacy Considerations:**
+- Anonymize user data
+- Respect Friend ID privacy
+- No PII in error logs
+- GDPR compliance if applicable
+
+**Verification:**
+- [ ] Error tracking receiving events
+- [ ] Analytics dashboard populated
+- [ ] Privacy settings configured
+- [ ] Alert notifications working
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-065: Create Admin Analytics Dashboard
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop if simple metrics display
+**Status:** PLANNED
+**Dependencies:** TASK-064
+**Estimated Duration:** 45-60 minutes
+**Priority:** MEDIUM - Admin tooling
+
+**Description:**
+Build admin dashboard showing key metrics, user engagement, and system health.
+
+**Components to Create:**
+- AnalyticsDashboard.tsx - Main dashboard page
+- MetricCard.tsx - Reusable metric display component
+- UsageChart.tsx - Chart components using recharts
+- adminAnalyticsService.ts - Aggregate Firestore queries
+
+**Metrics to Display:**
+1. **User Metrics**
+   - Total users (by role)
+   - New users (last 7/30 days)
+   - Active users (booked session in last 30 days)
+   - Friend connections count
+
+2. **Booking Metrics**
+   - Total bookings (all time / this month)
+   - Booking rate (bookings per session)
+   - Popular session types
+   - Cancellation rate
+   - Capacity utilization
+
+3. **Social Metrics**
+   - Friend requests sent/accepted
+   - Activity sharing adoption rate
+   - Friend activity engagement
+
+4. **System Health**
+   - Error rate (from error tracking)
+   - Average page load time
+   - Failed auth attempts
+   - Database query performance
+
+**Visualization:**
+- Line charts for trends
+- Bar charts for comparisons
+- Stat cards for key numbers
+- Date range selector
+
+**Verification:**
+- [ ] Dashboard shows accurate data
+- [ ] Charts render correctly
+- [ ] Date filtering works
+- [ ] Mobile responsive
+- [ ] Updates in real-time or on refresh
+
+**Result:**
+_Pending error tracking setup_
+
+---
+
+### TASK-066: Implement User Feedback Collection
+**Agent:** Jules
+**Alternative Agents:** Gemini if using external form service
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 30-45 minutes
+**Priority:** MEDIUM - User engagement
+
+**Description:**
+Add feedback collection mechanism for users to report issues, request features, and provide general feedback.
+
+**Implementation Options:**
+
+**Option 1: Built-in Feedback Form**
+- FeedbackModal.tsx component
+- Feedback button in navbar
+- feedbackService.ts with Firestore
+- Email notifications to admins
+
+**Option 2: External Service Integration**
+- Integrate Canny, UserVoice, or similar
+- Simpler implementation
+- More features out of box
+
+**Feedback Categories:**
+- Bug Report
+- Feature Request
+- General Feedback
+- User Experience Issue
+
+**Fields:**
+- Category (dropdown)
+- Title (required)
+- Description (required)
+- Priority (optional, set by admin)
+- Screenshot upload (optional)
+- Contact email (optional)
+
+**Admin View:**
+- View all feedback
+- Filter by category/status
+- Mark as reviewed/resolved
+- Respond to users
+
+**Verification:**
+- [ ] Feedback form accessible
+- [ ] Submissions stored correctly
+- [ ] Admin receives notifications
+- [ ] Admin can manage feedback
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-067: Implement Notification System
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop for simple implementation
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 60-75 minutes
+**Priority:** HIGH - User engagement
+
+**Description:**
+Implement notification system for booking confirmations, friend requests, and schedule updates.
+
+**Notification Types:**
+1. **Booking Notifications**
+   - Booking confirmed
+   - Booking reminder (24hr before)
+   - Booking cancelled
+   - Session cancelled by admin
+   - Booking from waitlist accepted
+
+2. **Social Notifications**
+   - Friend request received
+   - Friend request accepted
+   - Friend booked same session (if sharing enabled)
+
+3. **Admin Notifications**
+   - New user registration
+   - Booking at capacity
+   - User feedback submitted
+
+**Implementation Approaches:**
+
+**Phase 1: In-App Notifications**
+- NotificationCenter.tsx component
+- Notification bell icon in navbar
+- Unread count badge
+- Notification list with mark as read
+- notificationService.ts with Firestore
+
+**Phase 2: Email Notifications** (Optional)
+- Firebase Cloud Functions for email triggers
+- Email templates
+- SendGrid or Firebase Email extension
+- User email preferences
+
+**Phase 3: Push Notifications** (Future)
+- Service worker registration
+- Firebase Cloud Messaging
+- Notification permissions
+- Push token management
+
+**Data Model:**
+```typescript
+interface Notification {
+  id: string;
+  userId: string;
+  type: 'booking' | 'social' | 'system';
+  title: string;
+  message: string;
+  read: boolean;
+  actionUrl?: string;
+  createdAt: Timestamp;
+}
+```
+
+**Verification:**
+- [ ] Notifications created on events
+- [ ] Notification center displays correctly
+- [ ] Mark as read works
+- [ ] Unread count accurate
+- [ ] Clicking navigates correctly
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-068: Add Waiting List Feature
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop if simple implementation
+**Status:** PLANNED
+**Dependencies:** TASK-063, TASK-067 (notification system)
+**Estimated Duration:** 45-60 minutes
+**Priority:** MEDIUM - Feature enhancement
+
+**Description:**
+Allow users to join waiting list for fully-booked sessions and automatically book them if spots open up.
+
+**Features:**
+1. **User Can Join Waitlist**
+   - Button appears when session at capacity
+   - User added to waitlist queue
+   - Position in queue shown
+
+2. **Automatic Promotion**
+   - When booking cancelled, next on waitlist auto-booked
+   - User receives notification
+   - Program selection from waitlist join
+
+3. **Waitlist Management**
+   - User can leave waitlist
+   - Admin can view waitlist for session
+   - Admin can manually promote from waitlist
+
+**Components:**
+- WaitlistButton.tsx - Join/leave waitlist
+- WaitlistModal.tsx - View waitlist for session
+- BookingModal updates - Show waitlist option
+- ScheduleManager updates - Admin waitlist view
+
+**Service Updates:**
+```typescript
+// scheduleService.ts
+addToWaitlist(scheduleId, userId, programId)
+removeFromWaitlist(scheduleId, userId)
+promoteFromWaitlist(scheduleId) // Called on cancellation
+getWaitlist(scheduleId)
+```
+
+**Data Model:**
+```typescript
+interface WaitlistEntry {
+  id: string;
+  scheduleId: string;
+  userId: string;
+  programId: string;
+  position: number;
+  createdAt: Timestamp;
+}
+```
+
+**Verification:**
+- [ ] Can join waitlist for full session
+- [ ] Promotion happens on cancellation
+- [ ] Notifications sent correctly
+- [ ] Admin can view waitlist
+- [ ] Position updates correctly
+
+**Result:**
+_Pending notification system_
+
+---
+
+### TASK-069: Implement Session Check-In System
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop for simple QR code implementation
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 45-60 minutes
+**Priority:** MEDIUM - Operational feature
+
+**Description:**
+Add check-in functionality for sessions, allowing coaches to track attendance and mark no-shows.
+
+**Features:**
+1. **QR Code Check-In**
+   - Generate unique QR code for each session
+   - Users scan to check in
+   - Time-based validation (only within check-in window)
+
+2. **Manual Check-In**
+   - Coach can manually check in users
+   - Search by name or Friend ID
+   - Bulk check-in option
+
+3. **Attendance Tracking**
+   - Track check-in time
+   - Mark no-shows
+   - Generate attendance reports
+   - No-show penalties (future)
+
+**Components:**
+- CheckInModal.tsx - Coach interface
+- CheckInScanner.tsx - QR code scanner
+- AttendanceReport.tsx - Attendance history
+- generateQRCode utility
+- checkInService.ts
+
+**Data Model:**
+```typescript
+interface Attendance {
+  id: string;
+  bookingId: string;
+  userId: string;
+  scheduleId: string;
+  checkedIn: boolean;
+  checkInTime?: Timestamp;
+  noShow: boolean;
+  checkedInBy: 'qr' | 'coach' | 'user';
+}
+```
+
+**Check-In Window:**
+- 30 minutes before session
+- Until 10 minutes after start
+
+**Verification:**
+- [ ] QR codes generate correctly
+- [ ] Check-in works within window
+- [ ] Manual check-in functional
+- [ ] Attendance records saved
+- [ ] Reports show accurate data
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-070: Add Program Progress Tracking
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop for simple UI
+**Status:** PLANNED
+**Dependencies:** TASK-038 (programs implemented), TASK-069 (check-in system)
+**Estimated Duration:** 60-75 minutes
+**Priority:** MEDIUM - Member engagement
+
+**Description:**
+Track member progress through assigned programs with workout completion and milestone tracking.
+
+**Features:**
+1. **Workout Logging**
+   - Log completed workouts
+   - Track sets/reps/weight
+   - Notes on performance
+   - Link to specific sessions
+
+2. **Progress Visualization**
+   - Charts showing progress over time
+   - Completion percentage
+   - Milestones achieved
+   - Personal records
+
+3. **Coach Visibility**
+   - Coaches see member progress
+   - Identify struggling members
+   - Provide feedback/adjustments
+
+**Components:**
+- WorkoutLogger.tsx - Log workout completion
+- ProgressDashboard.tsx - Member progress view
+- ProgressChart.tsx - Visualization
+- CoachProgressView.tsx - Coach oversight
+- progressService.ts
+
+**Data Model:**
+```typescript
+interface WorkoutLog {
+  id: string;
+  userId: string;
+  programId: string;
+  workoutId: string;
+  sessionId?: string;
+  completedAt: Timestamp;
+  exercises: {
+    name: string;
+    sets: number;
+    reps: number;
+    weight: number;
+  }[];
+  notes?: string;
+  coachFeedback?: string;
+}
+
+interface ProgressMilestone {
+  id: string;
+  userId: string;
+  programId: string;
+  type: 'completion' | 'streak' | 'pr' | 'custom';
+  description: string;
+  achievedAt: Timestamp;
+}
+```
+
+**Verification:**
+- [ ] Can log workouts
+- [ ] Progress displays correctly
+- [ ] Charts render properly
+- [ ] Coach can view member progress
+- [ ] Milestones trigger correctly
+
+**Result:**
+_Pending program and check-in systems_
+
+---
+
+### TASK-071: Implement Advanced Search & Filters
+**Agent:** Jules or Claude Desktop
+**Alternative Agents:** Gemini for Firestore index creation
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 45-60 minutes
+**Priority:** LOW - UX enhancement
+
+**Description:**
+Add advanced filtering and search capabilities for schedules, programs, and users.
+
+**Schedule Filters:**
+- Date range picker
+- Session type filter
+- Coach filter
+- Time of day filter
+- Availability filter (spots available)
+- My bookings only toggle
+
+**Program Filters:**
+- Program type (strength, cardio, etc.)
+- Difficulty level
+- Duration
+- Assigned to me only
+
+**User Search (Admin only):**
+- Search by display name
+- Filter by role
+- Filter by program assignment
+- Active vs inactive
+- Registration date range
+
+**Components:**
+- FilterPanel.tsx - Reusable filter component
+- AdvancedSearchModal.tsx - Complex search UI
+- SearchResults.tsx - Results display
+- filterService.ts - Filter logic utilities
+
+**Firestore Indexes:**
+Create composite indexes for filtered queries:
+```
+schedules: [sessionType, date]
+schedules: [coachId, date]
+programs: [type, difficulty]
+```
+
+**URL State:**
+- Filters reflected in URL params
+- Shareable filtered views
+- Back button works correctly
+
+**Verification:**
+- [ ] All filters work correctly
+- [ ] Multiple filters combine properly
+- [ ] Firestore indexes created
+- [ ] URL state management works
+- [ ] Performance acceptable with filters
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-072: Add Export Functionality
+**Agent:** Jules or Gemini
+**Alternative Agents:** Claude Desktop for simple CSV export
+**Status:** PLANNED
+**Dependencies:** TASK-063
+**Estimated Duration:** 30-45 minutes
+**Priority:** LOW - Admin convenience
+
+**Description:**
+Add data export capabilities for reports, analytics, and record-keeping.
+
+**Export Options:**
+1. **Schedule Exports**
+   - Export schedule for date range
+   - CSV format
+   - Include booking details
+   - Include participant info
+
+2. **Roster Exports** (Already exists, enhance)
+   - Excel format option
+   - Include contact info option
+   - Include program assignments
+
+3. **Attendance Reports**
+   - Export attendance by session
+   - Export member attendance history
+   - No-show reports
+
+4. **User Data Export** (GDPR compliance)
+   - User can export their own data
+   - All bookings
+   - All program history
+   - All friend connections
+
+**Formats:**
+- CSV (primary)
+- Excel (via xlsx library)
+- PDF (for formatted reports)
+- JSON (for data portability)
+
+**Libraries:**
+```bash
+npm install xlsx jspdf
+```
+
+**Components:**
+- ExportButton.tsx - Reusable export trigger
+- ExportOptionsModal.tsx - Export format selection
+- exportService.ts - Export logic
+- PDFGenerator.ts - PDF formatting
+
+**Verification:**
+- [ ] CSV exports correctly
+- [ ] Excel format works
+- [ ] PDF renders properly
+- [ ] All data included
+- [ ] Large exports don't crash
+
+**Result:**
+_Pending deployment_
+
+---
+
+### TASK-073: Implement Activity Feed/Timeline
+**Agent:** Jules
+**Alternative Agents:** Claude Desktop for simple implementation
+**Status:** PLANNED
+**Dependencies:** TASK-063, TASK-039 (friend system)
+**Estimated Duration:** 60-75 minutes
+**Priority:** LOW - Social feature
+
+**Description:**
+Create activity feed showing recent actions, friend activities, and achievements.
+
+**Feed Items:**
+- Friend booked a session (if sharing enabled)
+- Friend achieved milestone
+- New friend connection
+- Session reminder
+- Program assignment
+- Achievement unlocked
+
+**Features:**
+1. **Personal Feed**
+   - User's own activities
+   - Chronological timeline
+   - Grouped by date
+
+2. **Friend Feed**
+   - Friends' activities (with permission)
+   - Filter by friend
+   - Real-time updates
+
+3. **Activity Privacy**
+   - Control what activities are shared
+   - Per-activity-type privacy settings
+   - Granular friend-level sharing
+
+**Components:**
+- ActivityFeed.tsx - Feed display
+- ActivityCard.tsx - Individual activity item
+- ActivitySettings.tsx - Privacy controls
+- activityService.ts - Activity creation and queries
+
+**Data Model:**
+```typescript
+interface Activity {
+  id: string;
+  userId: string;
+  type: 'booking' | 'friend' | 'milestone' | 'achievement';
+  description: string;
+  details: Record<string, any>;
+  visibility: 'private' | 'friends' | 'public';
+  createdAt: Timestamp;
+}
+```
+
+**Performance:**
+- Paginated feed (20 items per page)
+- Real-time updates for recent items only
+- Older items on-demand load
+
+**Verification:**
+- [ ] Feed displays correctly
+- [ ] Privacy settings respected
+- [ ] Real-time updates work
+- [ ] Pagination functions
+- [ ] Performance acceptable
+
+**Result:**
+_Pending deployment and friend system_
+
+---
+
+### TASK-074: Create Mobile App (PWA Enhancement)
+**Agent:** Claude Desktop or Jules
+**Alternative Agents:** Manual for app store submission
+**Status:** PLANNED
+**Dependencies:** TASK-062 (Phase 4 complete)
+**Estimated Duration:** 90-120 minutes
+**Priority:** MEDIUM - Mobile experience
+
+**Description:**
+Enhance PWA capabilities for native-like mobile experience including offline support and installability.
+
+**PWA Features:**
+1. **Service Worker**
+   - Offline page caching
+   - API response caching
+   - Background sync
+   - Push notification support
+
+2. **Web App Manifest**
+   - App icons (multiple sizes)
+   - Splash screens
+   - App name and theme
+   - Display mode (standalone)
+
+3. **Install Prompt**
+   - Custom install UI
+   - Install instructions
+   - Detect installed state
+   - Update notifications
+
+4. **Offline Support**
+   - Offline booking queue
+   - Cached schedule data
+   - Sync when online
+   - Offline indicator
+
+**Files to Create:**
+- public/sw.js - Service worker
+- public/manifest.json - Enhanced manifest
+- OfflineIndicator.tsx - Offline status
+- InstallPrompt.tsx - Install UI
+- pwaService.ts - PWA utilities
+
+**Testing:**
+- Lighthouse PWA audit > 90
+- Install on iOS
+- Install on Android
+- Test offline functionality
+- Test background sync
+
+**App Store Consideration:**
+- Trusted Web Activity for Android
+- iOS Web Clip
+- Future: Native wrapper with Capacitor
+
+**Verification:**
+- [ ] PWA installable
+- [ ] Works offline
+- [ ] Push notifications functional
+- [ ] Lighthouse PWA score > 90
+- [ ] Native-like experience
+
+**Result:**
+_Pending Phase 4 completion_
+
+---
+
+### TASK-075: Implement A/B Testing Framework
+**Agent:** Jules or Claude Desktop
+**Alternative Agents:** Gemini if using external service
+**Status:** PLANNED
+**Dependencies:** TASK-064 (analytics setup)
+**Estimated Duration:** 45-60 minutes
+**Priority:** LOW - Optimization
+
+**Description:**
+Set up A/B testing framework to experiment with UI changes and feature variations.
+
+**Testing Capabilities:**
+- Test different UI variations
+- Test booking flow changes
+- Test notification timing
+- Test friend feature prominence
+- Feature flags for gradual rollouts
+
+**Implementation Options:**
+
+**Option 1: Custom Implementation**
+- abTestService.ts with variant assignment
+- User variant persistence
+- Metric tracking per variant
+- Simple dashboard for results
+
+**Option 2: External Service**
+- Google Optimize
+- Firebase Remote Config
+- LaunchDarkly
+- Split.io
+
+**Test Examples:**
+1. **Booking Flow**
+   - A: Single-step booking
+   - B: Multi-step wizard
+
+2. **Friend Discovery**
+   - A: Search prominent
+   - B: Recommendations prominent
+
+3. **Notification Timing**
+   - A: 24hr before session
+   - B: 48hr + 2hr before
+
+**Components:**
+- ABTestProvider.tsx - Context provider
+- useABTest hook - Access variant
+- ABTestDashboard.tsx - View results
+- abTestService.ts - Variant management
+
+**Verification:**
+- [ ] Variants assigned correctly
+- [ ] Assignment persists
+- [ ] Metrics tracked properly
+- [ ] Results statistically valid
+- [ ] Easy to create new tests
+
+**Result:**
+_Pending analytics setup_
+
+---
+
+### TASK-076: Production Monitoring & Maintenance Procedures
+**Agent:** Gemini
+**Alternative Agents:** Claude Desktop for documentation
+**Status:** PLANNED
+**Dependencies:** TASK-063, TASK-064
+**Estimated Duration:** 30-45 minutes
+**Priority:** HIGH - Operational excellence
+
+**Description:**
+Establish production monitoring, maintenance schedules, and incident response procedures.
+
+**Monitoring Checklist:**
+1. **Daily Checks**
+   - [ ] Error rate < 1%
+   - [ ] Page load time < 3s
+   - [ ] Booking conversion rate normal
+   - [ ] No critical errors in logs
+
+2. **Weekly Checks**
+   - [ ] Database size within limits
+   - [ ] User growth on track
+   - [ ] Feature adoption metrics
+   - [ ] Performance trends
+
+3. **Monthly Checks**
+   - [ ] Security audit
+   - [ ] Dependency updates
+   - [ ] Backup verification
+   - [ ] Cost optimization review
+
+**Maintenance Schedule:**
+- **Daily:** Automated monitoring alerts
+- **Weekly:** Manual dashboard review
+- **Monthly:** Dependency updates, performance review
+- **Quarterly:** Security audit, feature planning
+
+**Incident Response:**
+1. **Severity Levels**
+   - CRITICAL: App down, data loss
+   - HIGH: Feature broken, security issue
+   - MEDIUM: Performance degradation
+   - LOW: Minor bugs, UX issues
+
+2. **Response Times**
+   - CRITICAL: Immediate (< 30 min)
+   - HIGH: Same day (< 4 hours)
+   - MEDIUM: Next business day
+   - LOW: Next sprint
+
+3. **Escalation Path**
+   - Level 1: Automated alerts
+   - Level 2: On-call developer
+   - Level 3: Project lead
+   - Level 4: Firebase support
+
+**Documentation:**
+- OPERATIONS.md - Daily/weekly procedures
+- INCIDENT-RESPONSE.md - Response playbook
+- MONITORING-DASHBOARD.md - Key metrics guide
+- BACKUP-RECOVERY.md - Backup procedures
+
+**Alerts to Configure:**
+- Error rate spike
+- Downtime
+- Performance degradation
+- Failed auth attempts spike
+- Database quota approaching
+- Billing anomaly
+
+**Verification:**
+- [ ] All monitoring in place
+- [ ] Alerts configured
+- [ ] Procedures documented
+- [ ] Team trained on procedures
+
+**Result:**
+_Pending deployment and analytics_
+
+---
+
+### TASK-077: COMMIT CHECKPOINT - Phase 5 Planning Complete
+**Agent:** Gemini
+**Status:** PLANNED
+**Dependencies:** Phase 4 complete, Phase 5 tasks defined
+**Estimated Duration:** 10-15 minutes
+
+**Description:**
+Commit phase 5 task planning and prepare for iterative post-deployment development.
+
+**Actions:**
+```powershell
+cd d:\dev\gymApp
+
+# Verify phase 5 tasks added
+git diff .dev-pipeline/tasklist.md
+
+# Commit task planning
+git add .dev-pipeline/
+git commit -m "feat: add Phase 5 post-deployment tasks
+
+- Production deployment and monitoring
+- Advanced features (notifications, waitlist, check-in)
+- Analytics and reporting enhancements
+- PWA capabilities
+- A/B testing framework
+- Production maintenance procedures
+
+Total 15 new tasks for iterative improvements."
+
+git push origin main
+```
+
+**Update STATUS-REPORT.md:**
+- Note Phase 5 tasks planned
+- Set Phase 5 status to PLANNED
+- Document strategic focus for post-deployment
+
+**Result:**
+_Pending Phase 4 completion_
+
+---
+
+## Phase 5 Progress Tracking
+
+**Deployment & Setup:**
+- [ ] TASK-063 - Production Deployment (60-90 min) 🔥 CRITICAL
+- [ ] TASK-064 - Error Tracking & Analytics (30-45 min)
+- [ ] TASK-065 - Admin Analytics Dashboard (45-60 min)
+
+**User Engagement:**
+- [ ] TASK-066 - Feedback Collection (30-45 min)
+- [ ] TASK-067 - Notification System (60-75 min)
+- [ ] TASK-068 - Waiting List Feature (45-60 min)
+
+**Operational Features:**
+- [ ] TASK-069 - Check-In System (45-60 min)
+- [ ] TASK-070 - Progress Tracking (60-75 min)
+
+**Enhancements:**
+- [ ] TASK-071 - Advanced Search & Filters (45-60 min)
+- [ ] TASK-072 - Export Functionality (30-45 min)
+- [ ] TASK-073 - Activity Feed (60-75 min)
+
+**Advanced Capabilities:**
+- [ ] TASK-074 - PWA Enhancement (90-120 min)
+- [ ] TASK-075 - A/B Testing Framework (45-60 min)
+
+**Operations:**
+- [ ] TASK-076 - Monitoring & Maintenance (30-45 min)
+- [ ] TASK-077 - Phase 5 Planning Complete (10-15 min)
+
+**Total Phase 5 Tasks:** 15
+**Estimated Total Time:** 12-16 hours
+**Priority:** Mixed - Deploy first, then iterate based on user feedback
+
+---
+
+## Execution Notes for Phase 5
+
+### Recommended Sequence:
+
+**Sprint 1: Deploy & Monitor** (High Priority)
+1. TASK-063 - Production Deployment
+2. TASK-064 - Error Tracking
+3. TASK-076 - Monitoring Procedures
+4. TASK-065 - Analytics Dashboard
+
+**Sprint 2: User Engagement** (High Priority)
+1. TASK-067 - Notifications
+2. TASK-066 - Feedback Collection
+3. TASK-068 - Waiting List
+
+**Sprint 3: Operations** (Medium Priority)
+1. TASK-069 - Check-In System
+2. TASK-070 - Progress Tracking
+3. TASK-072 - Export Functionality
+
+**Sprint 4: Polish & Advanced** (Lower Priority)
+1. TASK-071 - Advanced Filters
+2. TASK-073 - Activity Feed
+3. TASK-074 - PWA Enhancement
+4. TASK-075 - A/B Testing
+
+### Success Metrics:
+
+**Deployment Success:**
+- [ ] Zero downtime deployment
+- [ ] All monitoring active
+- [ ] Error rate < 1%
+- [ ] User feedback < 24hr response
+
+**User Engagement:**
+- [ ] Notification open rate > 40%
+- [ ] Waitlist to booking conversion > 60%
+- [ ] Feedback submission rate > 5% of users
+
+**Operations:**
+- [ ] Check-in adoption > 80%
+- [ ] Progress tracking adoption > 50%
+- [ ] Admin time savings measurable
+
+**Advanced Features:**
+- [ ] PWA install rate > 20%
+- [ ] A/B test statistical significance
+- [ ] Activity feed engagement > 30%
+
+---
