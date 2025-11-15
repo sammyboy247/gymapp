@@ -30,6 +30,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [user]);
 
+  // Escape key handler
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   const handleBooking = async () => {
     if (!user) return;
 
@@ -86,9 +98,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const isBooked = userBookings.some(b => b.sessionId === session.id);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">{session.sessionType}</h2>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+        className="bg-white p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="booking-modal-title" className="text-2xl font-bold mb-4">{session.sessionType}</h2>
         <p className="text-gray-700">{session.startTime.toDate().toLocaleString()}</p>
         <p className="text-gray-700">Coach: {session.coachName}</p>
         <p className="text-gray-700">Spots Remaining: {session.spotsRemaining} / {session.capacity}</p>

@@ -122,7 +122,13 @@ export const ScheduleView: React.FC = () => {
         </div>
       </div>
 
-      {bookingError && <p className="text-red-500">{bookingError}</p>}
+      {bookingError && <p className="text-red-500" role="alert">{bookingError}</p>}
+
+      {loading && (
+        <div aria-live="polite" aria-busy="true" className="sr-only">
+          Loading schedule...
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -133,16 +139,19 @@ export const ScheduleView: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedules.map(session => (
-            <div
+            <button
+              type="button"
               key={session.id}
               onClick={() => handleSessionClick(session)}
-              className={`p-4 border rounded-lg transition-colors ${
+              disabled={session.spotsRemaining === 0 && !isUserBooked(session.id)}
+              className={`p-4 border rounded-lg transition-colors text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 isUserBooked(session.id)
                   ? 'bg-blue-100 border-blue-500'
                   : session.spotsRemaining > 0
                   ? 'cursor-pointer hover:bg-zinc-100 border-gray-300'
-                  : 'bg-zinc-200 text-zinc-500 border-gray-200'
+                  : 'bg-zinc-200 text-zinc-500 border-gray-200 cursor-not-allowed'
               }`}
+              aria-label={`${isUserBooked(session.id) ? 'View booking for' : 'Book'} ${session.sessionType} on ${session.startTime.toDate().toLocaleDateString()} at ${session.startTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             >
               <h3 className="font-bold text-lg">{session.sessionType}</h3>
               <p className="text-sm text-gray-600">
@@ -158,7 +167,7 @@ export const ScheduleView: React.FC = () => {
                 <p className="text-blue-600 font-semibold mt-2">✓ Booked</p>
               )}
               <FriendActivityBadge friends={friendActivityMap[session.id] || []} />
-            </div>
+            </button>
           ))}
         </div>
       )}
