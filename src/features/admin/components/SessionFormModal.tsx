@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Timestamp } from 'firebase/firestore';
-import DatePicker from 'react-datepicker';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { enGB } from 'date-fns/locale';
 import { scheduleService } from '@/services/firebase/scheduleService';
 import type { Schedule, UserProfile } from '@/types';
 import { X, AlertCircle } from 'lucide-react';
 
 import "react-datepicker/dist/react-datepicker.css";
+
+// Register British English locale for dd/mm/yyyy format
+registerLocale('en-GB', enGB);
 
 interface SessionFormModalProps {
   isOpen: boolean;
@@ -150,11 +154,25 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Start Time</label>
-              <DatePicker selected={formData.startTime || new Date()} onChange={(date) => handleDateChange('startTime', date)} showTimeSelect dateFormat="Pp" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+              <DatePicker
+                selected={formData.startTime || new Date()}
+                onChange={(date) => handleDateChange('startTime', date)}
+                showTimeSelect
+                dateFormat="dd/MM/yyyy h:mm aa"
+                locale="en-GB"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">End Time</label>
-              <DatePicker selected={formData.endTime || new Date()} onChange={(date) => handleDateChange('endTime', date)} showTimeSelect dateFormat="Pp" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+              <DatePicker
+                selected={formData.endTime || new Date()}
+                onChange={(date) => handleDateChange('endTime', date)}
+                showTimeSelect
+                dateFormat="dd/MM/yyyy h:mm aa"
+                locale="en-GB"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              />
             </div>
           </div>
 
