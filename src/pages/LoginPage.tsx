@@ -31,12 +31,20 @@ const LoginPage: React.FC = () => {
           console.log('User not found, creating new account...');
           const user = await authService.createUserWithEmail(email, password);
 
-          // Create user profile with default member role
+          // Determine role based on email for test accounts
+          let role: 'admin' | 'coach' | 'member' = 'member';
+          if (email === 'admin@gymapp.com') {
+            role = 'admin';
+          } else if (email === 'coach@gymapp.com') {
+            role = 'coach';
+          }
+
+          // Create user profile with appropriate role
           const newProfile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
             email: email,
             displayName: email.split('@')[0],
             friendId: `User${Math.floor(Math.random() * 9000) + 1000}`,
-            role: 'member', // Default to member, can be changed in Firebase console
+            role: role,
             shareActivity: false,
             friends: [],
             friendRequestsSent: [],
@@ -44,7 +52,7 @@ const LoginPage: React.FC = () => {
           };
 
           await userService.createUserProfile(user.uid, newProfile);
-          console.log('Account created successfully');
+          console.log(`Account created successfully with role: ${role}`);
           navigate('/');
         } catch (createErr: any) {
           console.error('Account creation error:', createErr);
@@ -160,9 +168,16 @@ const LoginPage: React.FC = () => {
               Member
             </button>
           </div>
-          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-            <strong>First-time setup:</strong> Test accounts will be created automatically with "member" role.
-            To test admin/coach features, update the role field in Firebase Console &gt; Firestore &gt; users collection.
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+            <strong>Test accounts are auto-configured:</strong>
+            <ul className="mt-1 ml-4 list-disc">
+              <li>admin@gymapp.com → admin role</li>
+              <li>coach@gymapp.com → coach role</li>
+              <li>member1@gymapp.com → member role</li>
+            </ul>
+            <div className="mt-2 text-xs">
+              If you created accounts before this update, run in browser console: <code className="bg-blue-100 px-1">await updateTestAccountRoles()</code>
+            </div>
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
+import { updateTestAccountRoles } from '@/utils/updateTestAccountRoles';
 
 // --- Directly Import All Pages ---
 import LoginPage from '@/pages/LoginPage';
@@ -15,6 +16,11 @@ import AdminPage from '@/pages/AdminPage';
 function App() {
   // Initialize Firebase auth state listener
   useAuthInit();
+
+  // Make utility function available in browser console
+  if (typeof window !== 'undefined') {
+    (window as any).updateTestAccountRoles = updateTestAccountRoles;
+  }
 
   return (
     <>
