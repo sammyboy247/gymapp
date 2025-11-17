@@ -33,16 +33,28 @@ export const useAuthInit = () => {
           if (!userProfile && isMounted) {
             // New user, create a default profile
             console.log('[useAuthInit] No profile found, creating new profile...');
+
+            // Determine role based on email for test accounts
+            const email = firebaseUser.email || '';
+            let role: 'admin' | 'coach' | 'member' = 'member';
+            if (email === 'admin@gymapp.com') {
+              role = 'admin';
+            } else if (email === 'coach@gymapp.com') {
+              role = 'coach';
+            }
+
             const newProfile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
-              email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'New User',
+              email: email,
+              displayName: firebaseUser.displayName || email.split('@')[0] || 'New User',
               friendId: `User${Math.floor(Math.random() * 9000) + 1000}`,
-              role: 'member',
+              role: role,
               shareActivity: false,
               friends: [],
               friendRequestsSent: [],
               friendRequestsReceived: [],
             };
+
+            console.log(`[useAuthInit] Creating profile with role: ${role} for email: ${email}`);
             
             try {
               // Add timeout to prevent hanging forever
