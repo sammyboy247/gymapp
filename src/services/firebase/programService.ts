@@ -36,8 +36,11 @@ export const programService = {
   },
 
   getPrograms: async (): Promise<Program[]> => {
+    console.log('Fetching programs...');
     const snapshot = await getDocs(programsCollection);
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Program));
+    const programs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Program));
+    console.log(`Fetched ${programs.length} programs.`);
+    return programs;
   },
 
   getProgram: async (programId: string): Promise<Program | null> => {

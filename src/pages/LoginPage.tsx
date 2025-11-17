@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/services/firebase/config';
+import { authService } from '@/services/firebase/authService';
+import { userService } from '@/services/firebase/userService';
 import { AlertCircle } from 'lucide-react';
+import type { UserProfile } from '@/types';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,31 +18,56 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Try to sign in
+      await authService.signInWithEmail(email, password);
       // onAuthStateChanged in useAuthInit will handle the rest
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
 
-      // User-friendly error messages
-      switch (err.code) {
-        case 'auth/invalid-email':
-          setError('Invalid email address.');
-          break;
-        case 'auth/user-disabled':
-          setError('This account has been disabled.');
-          break;
-        case 'auth/user-not-found':
-          setError('No account found with this email.');
-          break;
-        case 'auth/wrong-password':
-          setError('Incorrect password.');
-          break;
-        case 'auth/invalid-credential':
-          setError('Invalid email or password.');
-          break;
-        default:
-          setError('Failed to sign in. Please try again.');
+      // If user not found, try to create account
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          console.log('User not found, creating new account...');
+          const user = await authService.createUserWithEmail(email, password);
+
+          // Create user profile with default member role
+          const newProfile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
+            email: email,
+            displayName: email.split('@')[0],
+            friendId: `User${Math.floor(Math.random() * 9000) + 1000}`,
+            role: 'member', // Default to member, can be changed in Firebase console
+            shareActivity: false,
+            friends: [],
+            friendRequestsSent: [],
+            friendRequestsReceived: [],
+          };
+
+          await userService.createUserProfile(user.uid, newProfile);
+          console.log('Account created successfully');
+          navigate('/');
+        } catch (createErr: any) {
+          console.error('Account creation error:', createErr);
+          setError('Failed to create account. Please try again.');
+        }
+      } else {
+        // User-friendly error messages
+        switch (err.code) {
+          case 'auth/invalid-email':
+            setError('Invalid email address.');
+            break;
+          case 'auth/user-disabled':
+            setError('This account has been disabled.');
+            break;
+          case 'auth/wrong-password':
+            setError('Incorrect password.');
+            break;
+          case 'auth/weak-password':
+            setError('Password is too weak. Use at least 6 characters.');
+            break;
+          default:
+            setError('Failed to sign in. Please try again.');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -134,11 +160,15 @@ const LoginPage: React.FC = () => {
               Member
             </button>
           </div>
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+            <strong>First-time setup:</strong> Test accounts will be created automatically with "member" role.
+            To test admin/coach features, update the role field in Firebase Console &gt; Firestore &gt; users collection.
+          </div>
         </div>
 
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
-            Test credentials are auto-filled when you click the buttons above
+            You can also create new accounts by entering any email/password and signing in.
           </p>
         </div>
       </div>

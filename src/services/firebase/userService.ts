@@ -3,18 +3,43 @@ import { db } from './config';
 import type { UserProfile } from '@/types';
 
 const createUserProfile = async (userId: string, profileData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>): Promise<void> => {
-  await setDoc(doc(db, 'users', userId), {
-    ...profileData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      ...profileData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error: any) {
+    // If document already exists (from parallel creation), ignore the error
+    if (error?.code === 'permission-denied' || error?.message?.includes('already exists')) {
+      console.log(`[userService] Profile for ${userId} already exists, skipping creation`);
+      return;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  const userDoc = await getDoc(doc(db, 'users', userId));
-  if (userDoc.exists()) {
-    return { id: userDoc.id, ...userDoc.data() } as UserProfile;
+  console.log(`[userService] Attempting to get user profile for userId: ${userId}`);
+  try {
+    // Add timeout to prevent hanging indefinitely when offline
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('getUserProfile timeout after 5s')), 5000);
+    });
+
+    const getDocPromise = getDoc(doc(db, 'users', userId));
+
+    const userDoc = await Promise.race([getDocPromise, timeoutPromise]) as any;
+
+    console.log(`[userService] User profile for ${userId} exists: ${userDoc?.exists?.() || false}`);
+    if (userDoc && userDoc.exists()) {
+      return { id: userDoc.id, ...userDoc.data() } as UserProfile;
+    }
+  } catch (error) {
+    console.error(`[userService] Error fetching user profile for ${userId}:`, error);
   }
+  console.log(`[userService] Returning null for ${userId}`);
   return null;
 };
 

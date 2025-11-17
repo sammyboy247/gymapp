@@ -1,18 +1,16 @@
-import { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 
-// --- Lazy Load All Pages for Code Splitting ---
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const HomePage = lazy(() => import('@/pages/HomePage'));
-const SchedulePage = lazy(() => import('@/pages/SchedulePage'));
-const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-const SocialPage = lazy(() => import('@/pages/SocialPage'));
-const AdminPage = lazy(() => import('@/pages/AdminPage'));
+// --- Directly Import All Pages ---
+import LoginPage from '@/pages/LoginPage';
+import HomePage from '@/pages/HomePage';
+import SchedulePage from '@/pages/SchedulePage';
+import ProfilePage from '@/pages/ProfilePage';
+import SocialPage from '@/pages/SocialPage';
+import AdminPage from '@/pages/AdminPage';
 
 function App() {
   // Initialize Firebase auth state listener
@@ -21,7 +19,6 @@ function App() {
   return (
     <>
       <Toaster position="top-right" richColors closeButton />
-      <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
@@ -32,17 +29,17 @@ function App() {
               <Route path="/schedule" element={<SchedulePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/social" element={<SocialPage />} />
+            </Route>
+          </Route>
 
-              {/* Admin-Only Route */}
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
-                <Route path="/admin" element={<AdminPage />} />
-              </Route>
-
+          {/* Admin-Only Route */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
+            <Route element={<AppLayout />}>
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Route>
 
         </Routes>
-      </Suspense>
     </>
   );
 }

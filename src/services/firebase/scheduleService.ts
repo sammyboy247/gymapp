@@ -24,6 +24,7 @@ const getSchedules = (
   callback: (schedules: Schedule[]) => void,
   sessionTypeFilter?: string | null
 ) => {
+  console.log(`Fetching schedules from ${startDate.toISOString()} to ${endDate.toISOString()}`);
   let q = query(
     collection(db, 'schedules'),
     where('startTime', '>=', Timestamp.fromDate(startDate)),
@@ -42,7 +43,7 @@ const getSchedules = (
     if (sessionTypeFilter) {
       schedules = schedules.filter(s => s.sessionType === sessionTypeFilter);
     }
-
+    console.log(`Fetched ${schedules.length} schedules.`);
     callback(schedules);
   });
 };

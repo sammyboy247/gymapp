@@ -7,12 +7,14 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
 </head>
 <body>
     <div class="container-fluid">
         <h1 class="mt-4">Dev Pipeline Dashboard</h1>
-        <div class="row">
-            <div class="col-md-4">
+        <div class="grid">
+            <div class="grid-sizer col-4"></div>
+            <div class="grid-item col-4">
                 <div class="card">
                     <div class="card-header">
                         Task List
@@ -22,7 +24,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="grid-item col-4">
                 <div class="card">
                     <div class="card-header">
                         Action Queue
@@ -32,7 +34,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="grid-item col-4">
                 <div class="card">
                     <div class="card-header">
                         Status Report
@@ -42,9 +44,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="row mt-4">
-            <div class="col-md-6">
+            <div class="grid-item col-8">
                 <div class="card">
                     <div class="card-header">
                         Multi-Agent Workflow Specification
@@ -54,7 +54,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="grid-item col-4">
                 <div class="card">
                     <div class="card-header">
                         Audit Progress

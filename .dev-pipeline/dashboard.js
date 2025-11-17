@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
         'workflow-spec': 'MULTI-AGENT-WORKFLOW-SPECIFICATION.md'
     };
 
+    const auditFiles = [
+        'ACCESSIBILITY_AUDIT.md',
+        'ERROR_HANDLING_AUDIT.md',
+        'MOBILE_RESPONSIVENESS_AUDIT.md',
+        'PERFORMANCE_AUDIT.md'
+    ];
+
+    let auditChart = null;
+    let msnry = null;
+
     const fetchAndRender = async (elementId, filePath) => {
         try {
             const response = await fetch(filePath);
@@ -39,7 +49,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    for (const [elementId, filePath] of Object.entries(files)) {
-        fetchAndRender(elementId, filePath);
-    }
+    const renderAuditProgress = async () => {
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        for (const filePath of auditFiles) {
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                const tasks = text.split('\n').filter(line => line.startsWith('- [') || line.startsWith('* ['));
+                totalTasks += tasks.length;
+                completedTasks += tasks.filter(task => task.includes('[x]')).length;
+            } catch (error) {
+                console.error(`Error fetching or parsing ${filePath}:`, error);
+            }
+        }
+
+        const auditData = {
+            labels: ['Completed', 'Remaining'],
+            datasets: [{
+                data: [completedTasks, totalTasks - completedTasks],
+                backgroundColor: ['#28a745', '#dc3545'],
+            }]
+        };
+
+        if (auditChart) {
+            auditChart.data = auditData;
+            auditChart.update();
+        } else {
+            const ctx = document.getElementById('audit-chart').getContext('2d');
+            auditChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: auditData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                }
+            });
+        }
+    };
+
+    const initMasonry = () => {
+        const grid = document.querySelector('.grid');
+        msnry = new Masonry(grid, {
+            itemSelector: '.grid-item',
+            columnWidth: '.grid-sizer',
+            percentPosition: true
+        });
+    };
+
+    const refreshDashboard = async () => {
+        await Promise.all(Object.entries(files).map(([elementId, filePath]) => fetchAndRender(elementId, filePath)));
+        await renderAuditProgress();
+
+        if (msnry) {
+            msnry.reloadItems();
+            msnry.layout();
+        } else {
+            initMasonry();
+        }
+    };
+
+    refreshDashboard();
+    setInterval(refreshDashboard, 30000); // Refresh every 30 seconds
 });

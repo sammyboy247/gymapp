@@ -2,3 +2,12 @@
     height: 300px;
     overflow-y: auto;
 }
+
+.grid-sizer,
+.grid-item {
+    width: 33.333%;
+}
+
+.grid-item--width2 {
+    width: 66.666%;
+}

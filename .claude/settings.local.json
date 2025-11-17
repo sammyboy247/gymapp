@@ -21,9 +21,14 @@
       "Bash(jules_task_039.diff)",
       "Bash(jules_task_041.diff)",
       "Bash(git push:*)",
-      "Bash(jules_task_052.diff)"
+      "Bash(jules_task_052.diff)",
+      "Bash(dir:*)",
+      "Bash(NUL)",
+      "Bash(dir \"%LOCALAPPDATA%\\claude\" 2)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true
 }
