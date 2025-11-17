@@ -119,7 +119,15 @@ export const ProgramFormModal: React.FC<Props> = ({
             <Controller
               name="durationWeeks"
               control={control}
-              render={({ field }) => <input type="number" {...field} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />}
+              render={({ field: { onChange, value, ...field } }) => (
+                <input
+                  type="number"
+                  {...field}
+                  value={value || ''}
+                  onChange={(e) => onChange(e.target.value ? parseInt(e.target.value, 10) : 0)}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                />
+              )}
             />
             {errors.durationWeeks && <p className="text-red-500 text-xs mt-1">{errors.durationWeeks.message}</p>}
           </div>
