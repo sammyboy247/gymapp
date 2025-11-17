@@ -48,8 +48,14 @@ service cloud.firestore {
       // Anyone authenticated can read schedules
       allow read: if isAuthenticated();
 
-      // Only admins and coaches can create/update/delete schedules
-      allow create, update, delete: if isAdminOrCoach();
+      // Only admins and coaches can create/delete schedules
+      allow create, delete: if isAdminOrCoach();
+
+      // Users can update spotsRemaining when booking (for transactions)
+      // Admins/coaches can update everything
+      allow update: if isAdminOrCoach() ||
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spotsRemaining']));
     }
 
     // Bookings collection - Booking documents
