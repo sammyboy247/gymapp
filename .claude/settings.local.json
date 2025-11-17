@@ -25,7 +25,10 @@
       "Bash(dir:*)",
       "Bash(NUL)",
       "Bash(dir \"%LOCALAPPDATA%\\claude\" 2)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(cat:*)",
+      "Bash(firebase login:*)"
     ],
     "deny": [],
     "ask": []

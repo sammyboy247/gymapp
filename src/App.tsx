@@ -4,6 +4,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
 import { updateTestAccountRoles } from '@/utils/updateTestAccountRoles';
+import { testFirestore } from '@/utils/testFirestore';
+import { checkDatabase } from '@/utils/checkDatabase';
 
 // --- Directly Import All Pages ---
 import LoginPage from '@/pages/LoginPage';
@@ -17,9 +19,11 @@ function App() {
   // Initialize Firebase auth state listener
   useAuthInit();
 
-  // Make utility function available in browser console
+  // Make utility functions available in browser console
   if (typeof window !== 'undefined') {
     (window as any).updateTestAccountRoles = updateTestAccountRoles;
+    (window as any).testFirestore = testFirestore;
+    (window as any).checkDatabase = checkDatabase;
   }
 
   return (

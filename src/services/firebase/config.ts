@@ -24,7 +24,8 @@ console.log('[Firebase Config] Initializing with config:', {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Connect to the gym-app-main database instead of (default)
+export const db = getFirestore(app, 'gym-app-main');
 
 // Enable offline persistence (helps with offline/slow connections)
 enableIndexedDbPersistence(db).catch((err) => {
