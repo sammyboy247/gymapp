@@ -23,6 +23,19 @@ export const Navbar: React.FC = () => {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-100 text-purple-700 border-purple-300';
+      case 'coach':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'member':
+        return 'bg-blue-100 text-blue-700 border-blue-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-300';
+    }
+  };
+
   return (
     <nav className="bg-white shadow-md">
       <div className="container mx-auto px-4 sm:px-6 py-3">
@@ -49,6 +62,22 @@ export const Navbar: React.FC = () => {
                 <Link to="/profile" className="flex items-center text-zinc-600 hover:text-blue-600">
                   <User className="w-5 h-5 mr-1" /> Profile
                 </Link>
+
+                {/* User Info Display */}
+                {userProfile && (
+                  <div className="flex items-center px-3 py-1.5 border-l border-gray-300 ml-2">
+                    <div className="flex flex-col items-end mr-3">
+                      <span className="text-sm font-semibold text-zinc-800">
+                        {userProfile.displayName}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${getRoleBadgeColor(userProfile.role)}`}>
+                        {userProfile.role}
+                      </span>
+                    </div>
+                    <User className="w-6 h-6 text-zinc-500" />
+                  </div>
+                )}
+
                 <button onClick={handleLogout} className="flex items-center text-red-500 hover:text-red-700">
                   <LogOut className="w-5 h-5 mr-1" /> Logout
                 </button>
@@ -58,15 +87,27 @@ export const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile: User Info + Menu Button */}
           {isAuthenticated && (
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-zinc-600 hover:text-blue-600"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            <div className="md:hidden flex items-center space-x-3">
+              {userProfile && (
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-semibold text-zinc-800">
+                    {userProfile.displayName}
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full border ${getRoleBadgeColor(userProfile.role)}`}>
+                    {userProfile.role}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-zinc-600 hover:text-blue-600"
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           )}
         </div>
 
