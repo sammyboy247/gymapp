@@ -28,7 +28,38 @@
 
 ## 🎯 IMMEDIATE ACTIONS REQUIRED
 
-### Priority 1: Console Errors Investigation ✅ COMPLETED
+### Priority 1: Firestore Rules Deployment ⚠️ REQUIRES USER ACTION
+**Who:** User (interactive authentication required)
+**What:** Deploy Firestore security rules to enable friend requests
+**Status:** BLOCKED - Requires interactive Firebase login
+**Impact:** HIGH - Friend requests currently fail with permission errors
+
+**Issue:**
+- Friend request creation fails with "Missing or insufficient permissions"
+- Local `firestore.rules` file is correct
+- Rules have NOT been deployed to Firebase project
+
+**Solution Required:**
+The user must run the following commands interactively:
+
+```bash
+# Step 1: Re-authenticate (opens browser)
+firebase login --reauth
+
+# Step 2: Verify project
+firebase projects:list
+
+# Step 3: Deploy rules
+firebase deploy --only firestore:rules
+```
+
+**Documentation:**
+- Complete fix guide: `FIRESTORE_RULES_DEPLOYMENT_FIX.md`
+- Alternative: Manual deployment via Firebase Console
+
+---
+
+### Priority 2: Console Errors Investigation ✅ COMPLETED
 **Who:** Claude Code
 **What:** Investigated scrolling errors in console
 **Status:** COMPLETED 2025-11-18
@@ -44,7 +75,7 @@
 
 ---
 
-### Priority 2: Comprehensive End-to-End Testing
+### Priority 3: Comprehensive End-to-End Testing
 **Who:** User + Claude Code (for fixes)
 **What:** Test all implemented features to identify any bugs
 **Status:** PENDING
