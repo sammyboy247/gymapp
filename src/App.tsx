@@ -15,6 +15,7 @@ import SchedulePage from '@/pages/SchedulePage';
 import ProfilePage from '@/pages/ProfilePage';
 import SocialPage from '@/pages/SocialPage';
 import AdminPage from '@/pages/AdminPage';
+import GymSettingsPage from '@/pages/GymSettingsPage';
 
 function App() {
   // Initialize Firebase auth state listener
@@ -44,10 +45,11 @@ function App() {
             </Route>
           </Route>
 
-          {/* Admin-Only Route */}
+          {/* Admin-Only Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
             <Route element={<AppLayout />}>
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/gym-settings" element={<GymSettingsPage />} />
             </Route>
           </Route>
 

@@ -25,32 +25,57 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [originalSchedule, setOriginalSchedule] = useState<Schedule | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly'>('weekly');
+  const [recurrenceCount, setRecurrenceCount] = useState<number>(1);
 
   useEffect(() => {
-    if (schedule) {
-      setOriginalSchedule(schedule);
-      setFormData({
-        ...schedule,
-        startTime: schedule.startTime.toDate(),
-        endTime: schedule.endTime.toDate(),
-      });
-    } else {
-      setOriginalSchedule(null);
-      setFormData({
-        sessionType: '',
-        startTime: new Date(),
-        endTime: new Date(new Date().getTime() + 60 * 60 * 1000),
-        coachId: '',
-        coachName: '',
-        capacity: 10,
-        spotsRemaining: 10,
-        location: '',
-        description: '',
-      });
-    }
+    const initializeForm = async () => {
+      if (schedule) {
+        // Query actual booking count from Firestore to get accurate spotsRemaining
+        const bookings = await scheduleService.getSessionBookings(schedule.id);
+        const actualBookedCount = bookings.length;
+        const correctSpotsRemaining = schedule.capacity - actualBookedCount;
 
-    // In a real app, you'd fetch this from a userService
-    const mockCoaches: UserProfile[] = [
+        setOriginalSchedule({
+          ...schedule,
+          spotsRemaining: correctSpotsRemaining
+        });
+
+        const startTime = schedule.startTime.toDate();
+        const endTime = schedule.endTime.toDate();
+        const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+
+        setDurationMinutes(duration);
+        setFormData({
+          sessionType: schedule.sessionType,
+          coachId: schedule.coachId,
+          coachName: schedule.coachName,
+          capacity: schedule.capacity,
+          spotsRemaining: correctSpotsRemaining,
+          location: schedule.location,
+          description: schedule.description,
+          startTime: startTime,
+          endTime: endTime,
+        });
+      } else {
+        setOriginalSchedule(null);
+        setFormData({
+          sessionType: '',
+          startTime: new Date(),
+          endTime: new Date(new Date().getTime() + 60 * 60 * 1000),
+          coachId: '',
+          coachName: '',
+          capacity: 10,
+          spotsRemaining: 10,
+          location: '',
+          description: '',
+        });
+      }
+
+      // In a real app, you'd fetch this from a userService
+      const mockCoaches: UserProfile[] = [
       {
         id: 'coach1',
         displayName: 'Coach Alice',
@@ -77,9 +102,11 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       },
-    ];
-    setCoaches(mockCoaches);
+      ];
+      setCoaches(mockCoaches);
+    };
 
+    initializeForm();
   }, [schedule]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -140,18 +167,62 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
     }
 
     try {
-      const dataToSave = {
-        ...formData,
-        startTime: Timestamp.fromDate(formData.startTime as Date),
-        endTime: Timestamp.fromDate(formData.endTime as Date),
+      // Calculate end time from start time + duration
+      const startTime = formData.startTime as Date;
+      const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
+
+      const baseSessionData: any = {
+        sessionType: formData.sessionType,
+        coachId: formData.coachId,
+        coachName: formData.coachName,
+        capacity: formData.capacity,
+        location: formData.location,
+        description: formData.description,
+        startTime: Timestamp.fromDate(startTime),
+        endTime: Timestamp.fromDate(endTime),
       };
 
       if (schedule && schedule.id) {
-        await scheduleService.updateSchedule(schedule.id, dataToSave);
+        // Editing existing session
+        baseSessionData.spotsRemaining = formData.spotsRemaining;
+        await scheduleService.updateSchedule(schedule.id, baseSessionData);
         toast.success('Session updated successfully');
       } else {
-        await scheduleService.createSchedule(dataToSave as Omit<Schedule, 'id'>);
-        toast.success('Session created successfully');
+        // Creating new session(s)
+        baseSessionData.spotsRemaining = formData.capacity;
+
+        if (isRecurring && recurrenceCount > 1) {
+          // Create multiple sessions
+          const promises = [];
+          for (let i = 0; i < recurrenceCount; i++) {
+            const sessionStartTime = new Date(startTime);
+            const sessionEndTime = new Date(endTime);
+
+            if (recurrenceType === 'daily') {
+              sessionStartTime.setDate(sessionStartTime.getDate() + i);
+              sessionEndTime.setDate(sessionEndTime.getDate() + i);
+            } else {
+              // weekly
+              sessionStartTime.setDate(sessionStartTime.getDate() + (i * 7));
+              sessionEndTime.setDate(sessionEndTime.getDate() + (i * 7));
+            }
+
+            const sessionData = {
+              ...baseSessionData,
+              startTime: Timestamp.fromDate(sessionStartTime),
+              endTime: Timestamp.fromDate(sessionEndTime),
+            };
+
+            promises.push(scheduleService.createSchedule(sessionData as Omit<Schedule, 'id'>));
+          }
+
+          await Promise.all(promises);
+          toast.success(`${recurrenceCount} sessions created successfully`);
+        } else {
+          // Create single session
+          await scheduleService.createSchedule(baseSessionData as Omit<Schedule, 'id'>);
+          toast.success('Session created successfully');
+        }
       }
       onSave();
       onClose();
@@ -194,17 +265,61 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">End Time</label>
-              <DatePicker
-                selected={formData.endTime || new Date()}
-                onChange={(date) => handleDateChange('endTime', date)}
-                showTimeSelect
-                dateFormat="dd/MM/yyyy h:mm aa"
-                locale="en-GB"
+              <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+              <input
+                type="number"
+                name="duration"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 60)}
+                min="15"
+                step="15"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                required
               />
             </div>
           </div>
+
+          {!schedule && (
+            <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="recurring"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="mr-2"
+                />
+                <label htmlFor="recurring" className="text-sm font-medium text-gray-700">Make this a recurring session</label>
+              </div>
+
+              {isRecurring && (
+                <div className="grid grid-cols-2 gap-4 pl-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Repeat</label>
+                    <select
+                      value={recurrenceType}
+                      onChange={(e) => setRecurrenceType(e.target.value as 'daily' | 'weekly')}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Number of sessions</label>
+                    <input
+                      type="number"
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(parseInt(e.target.value) || 1)}
+                      min="1"
+                      max="52"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
