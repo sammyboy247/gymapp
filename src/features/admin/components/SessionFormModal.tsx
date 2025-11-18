@@ -24,15 +24,18 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [originalSchedule, setOriginalSchedule] = useState<Schedule | null>(null);
 
   useEffect(() => {
     if (schedule) {
+      setOriginalSchedule(schedule);
       setFormData({
         ...schedule,
         startTime: schedule.startTime.toDate(),
         endTime: schedule.endTime.toDate(),
       });
     } else {
+      setOriginalSchedule(null);
       setFormData({
         sessionType: '',
         startTime: new Date(),
@@ -81,13 +84,40 @@ const SessionFormModal: React.FC<SessionFormModalProps> = ({ isOpen, onClose, sc
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'capacity' ? parseInt(value, 10) : value }));
+
     if (name === 'capacity') {
-      setFormData(prev => ({...prev, spotsRemaining: parseInt(value,10)}));
-    }
-     if (name === 'coachId') {
+      const newCapacity = parseInt(value, 10);
+
+      // Calculate how many spots are currently booked
+      if (originalSchedule) {
+        const bookedSpots = originalSchedule.capacity - originalSchedule.spotsRemaining;
+        const newSpotsRemaining = newCapacity - bookedSpots;
+
+        // Validate that new capacity isn't less than current bookings
+        if (newCapacity < bookedSpots) {
+          setError(`Cannot reduce capacity below ${bookedSpots} (current bookings)`);
+          return;
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          capacity: newCapacity,
+          spotsRemaining: newSpotsRemaining
+        }));
+        setError(null);
+      } else {
+        // New session: spots remaining = capacity
+        setFormData(prev => ({
+          ...prev,
+          capacity: newCapacity,
+          spotsRemaining: newCapacity
+        }));
+      }
+    } else if (name === 'coachId') {
       const selectedCoach = coaches.find(c => c.id === value);
-      setFormData(prev => ({ ...prev, coachName: selectedCoach?.displayName || '' }));
+      setFormData(prev => ({ ...prev, coachId: value, coachName: selectedCoach?.displayName || '' }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
