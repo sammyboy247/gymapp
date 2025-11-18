@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
 import { updateTestAccountRoles } from '@/utils/updateTestAccountRoles';
 import { testFirestore } from '@/utils/testFirestore';
 import { checkDatabase } from '@/utils/checkDatabase';
+import { checkUserRole } from '@/utils/checkUserRole';
 
 // --- Directly Import All Pages ---
 import LoginPage from '@/pages/LoginPage';
@@ -24,6 +25,7 @@ function App() {
     (window as any).updateTestAccountRoles = updateTestAccountRoles;
     (window as any).testFirestore = testFirestore;
     (window as any).checkDatabase = checkDatabase;
+    (window as any).checkUserRole = checkUserRole;
   }
 
   return (
