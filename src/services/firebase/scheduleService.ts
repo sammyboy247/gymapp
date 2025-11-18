@@ -60,6 +60,18 @@ const getSessionById = async (sessionId: string): Promise<Schedule | null> => {
 
 // Book a session for a user
 const bookSession = async (sessionId: string, userId: string, programId: string): Promise<string> => {
+  // Check for double booking BEFORE transaction (queries don't work well inside transactions)
+  const bookingsQuery = query(
+    collection(db, 'bookings'),
+    where('userId', '==', userId),
+    where('sessionId', '==', sessionId),
+    where('status', '==', 'active')
+  );
+  const userBookingSnap = await getDocs(bookingsQuery);
+  if (!userBookingSnap.empty) {
+    throw new Error('You are already booked for this session.');
+  }
+
   const sessionRef = doc(db, 'schedules', sessionId);
   const bookingRef = doc(collection(db, 'bookings'));
 
@@ -74,18 +86,6 @@ const bookSession = async (sessionId: string, userId: string, programId: string)
       throw new Error('This session is full!');
     }
 
-    // Check for double booking
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('userId', '==', userId),
-      where('sessionId', '==', sessionId),
-      where('status', '==', 'active')
-    );
-    const userBookingSnap = await getDocs(bookingsQuery);
-    if (!userBookingSnap.empty) {
-      throw new Error('You are already booked for this session.');
-    }
-    
     transaction.update(sessionRef, {
       spotsRemaining: session.spotsRemaining - 1,
     });
