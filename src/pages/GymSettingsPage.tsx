@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Clock, Users, Package, Plus, Trash2, Edit2, Save } from 'lucide-react';
+import { Building2, Clock, Users, Package, Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OpeningHours {

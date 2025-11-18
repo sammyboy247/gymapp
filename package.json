@@ -7,12 +7,16 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "seed": "ts-node scripts/seedFirestore.ts",
-    "seed:demo": "ts-node scripts/seedData.ts",
-    "seed:demo:clear": "ts-node scripts/seedData.ts --clear",
-    "seed:emulator": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 ts-node scripts/seedFirestore.ts"
+    "seed": "vite-node src/scripts/seedData.ts",
+    "seed:old": "ts-node scripts/seedFirestore.ts",
+    "seed:emulator": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 ts-node scripts/seedFirestore.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^22.10.5",
     "autoprefixer": "^10.4.21",
@@ -23,7 +27,8 @@
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vite-node": "^5.2.0"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
