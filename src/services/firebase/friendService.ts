@@ -4,6 +4,8 @@ import {
   where,
   getDocs,
   doc,
+  setDoc,
+  deleteDoc,
   writeBatch,
   getDoc,
   runTransaction,
@@ -39,44 +41,26 @@ export const searchByFriendId = async (friendId: string): Promise<PublicUserData
 
 // Send a friend request
 export const sendFriendRequest = async (fromUserId: string, toUserId: string) => {
-  const batch = writeBatch(db);
-
-  const fromUserRef = doc(usersCollection, fromUserId);
-  batch.update(fromUserRef, { friendRequestsSent: arrayUnion(toUserId) });
-
-  const toUserRef = doc(usersCollection, toUserId);
-  batch.update(toUserRef, { friendRequestsReceived: arrayUnion(fromUserId) });
-
+  // Simply create the friend request document
+  // No need to update user arrays - we query from friendRequests collection
   const newRequestRef = doc(friendRequestsCollection);
-  batch.set(newRequestRef, {
+  await setDoc(newRequestRef, {
     fromUserId,
     toUserId,
     status: 'pending',
     createdAt: serverTimestamp(),
   });
-
-  await batch.commit();
 };
 
 // Accept a friend request
 export const acceptFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
   await runTransaction(db, async (transaction) => {
     const requestRef = doc(friendRequestsCollection, requestId);
-    const fromUserRef = doc(usersCollection, fromUserId);
-    const toUserRef = doc(usersCollection, toUserId);
 
+    // Update request status to accepted
     transaction.update(requestRef, { status: 'accepted', respondedAt: serverTimestamp() });
 
-    transaction.update(fromUserRef, {
-      friendRequestsSent: arrayRemove(toUserId),
-      friends: arrayUnion(toUserId),
-    });
-
-    transaction.update(toUserRef, {
-      friendRequestsReceived: arrayRemove(fromUserId),
-      friends: arrayUnion(fromUserId),
-    });
-
+    // Create friendship document
     const newFriendshipRef = doc(friendshipsCollection);
     transaction.set(newFriendshipRef, {
       user1Id: fromUserId,
@@ -90,68 +74,66 @@ export const acceptFriendRequest = async (requestId: string, fromUserId: string,
 
 // Deny a friend request
 export const denyFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
-  const batch = writeBatch(db);
-
+  // Simply update the request status to denied
   const requestRef = doc(friendRequestsCollection, requestId);
-  batch.update(requestRef, { status: 'denied', respondedAt: serverTimestamp() });
-
-  const fromUserRef = doc(usersCollection, fromUserId);
-  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
-
-  const toUserRef = doc(usersCollection, toUserId);
-  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
-
-  await batch.commit();
+  await setDoc(requestRef, { status: 'denied', respondedAt: serverTimestamp() }, { merge: true });
 };
 
 // Cancel a sent friend request
 export const cancelFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
-  const batch = writeBatch(db);
-
+  // Simply delete the friend request document
   const requestRef = doc(friendRequestsCollection, requestId);
-  batch.delete(requestRef);
-
-  const fromUserRef = doc(usersCollection, fromUserId);
-  batch.update(fromUserRef, { friendRequestsSent: arrayRemove(toUserId) });
-
-  const toUserRef = doc(usersCollection, toUserId);
-  batch.update(toUserRef, { friendRequestsReceived: arrayRemove(fromUserId) });
-
-  await batch.commit();
+  await deleteDoc(requestRef);
 };
 
 // Remove a friend
 export const removeFriend = async (userId: string, friendId: string) => {
-  await runTransaction(db, async (transaction) => {
-    const userRef = doc(usersCollection, userId);
-    const friendRef = doc(usersCollection, friendId);
+  // Find and delete the friendship document
+  // Query for friendship where either user1Id or user2Id matches both users
+  const q1 = query(
+    friendshipsCollection,
+    where('user1Id', '==', userId),
+    where('user2Id', '==', friendId)
+  );
+  const q2 = query(
+    friendshipsCollection,
+    where('user1Id', '==', friendId),
+    where('user2Id', '==', userId)
+  );
 
-    transaction.update(userRef, { friends: arrayRemove(friendId) });
-    transaction.update(friendRef, { friends: arrayRemove(userId) });
+  const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
 
-    const friendshipQuery = query(
-      friendshipsCollection,
-      where('user1Id', 'in', [userId, friendId]),
-      where('user2Id', 'in', [userId, friendId])
-    );
-    const friendshipSnapshot = await getDocs(friendshipQuery);
-    friendshipSnapshot.forEach((doc) => {
-      transaction.delete(doc.ref);
-    });
-  });
+  const friendshipDoc = snapshot1.docs[0] || snapshot2.docs[0];
+  if (friendshipDoc) {
+    await deleteDoc(friendshipDoc.ref);
+  }
 };
 
 // Get user's friends with their public data
 export const getUserFriends = async (userId: string): Promise<PublicUserData[]> => {
-  const userRef = doc(usersCollection, userId);
-  const userDoc = await getDoc(userRef);
-  const userData = userDoc.data() as UserProfile;
+  // Query friendships where user is either user1 or user2
+  const q1 = query(friendshipsCollection, where('user1Id', '==', userId));
+  const q2 = query(friendshipsCollection, where('user2Id', '==', userId));
 
-  if (!userData.friends || userData.friends.length === 0) {
+  const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+  // Combine both queries and extract friend IDs
+  const friendIds: string[] = [];
+  snapshot1.docs.forEach((doc) => {
+    const friendship = doc.data() as Friendship;
+    friendIds.push(friendship.user2Id);
+  });
+  snapshot2.docs.forEach((doc) => {
+    const friendship = doc.data() as Friendship;
+    friendIds.push(friendship.user1Id);
+  });
+
+  if (friendIds.length === 0) {
     return [];
   }
 
-  const friendsQuery = query(usersCollection, where('__name__', 'in', userData.friends));
+  // Fetch friend user documents
+  const friendsQuery = query(usersCollection, where('__name__', 'in', friendIds));
   const friendsSnapshot = await getDocs(friendsQuery);
 
   return friendsSnapshot.docs.map((doc) => {

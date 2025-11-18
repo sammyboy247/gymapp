@@ -1,61 +1,55 @@
-# Friend Request Permission Fix
+# Friend Request Permission Fix - RESOLVED ✅
 
 ## Problem
-Users are getting "Missing or insufficient permissions" error when trying to send friend requests.
+Users were getting "Missing or insufficient permissions" error when trying to send friend requests.
 
-## Root Cause
-The Firestore security rules in the local `firestore.rules` file are correct, but they **have not been deployed** to the Firebase project. The Firebase Console is still using default/old rules that don't allow friend request creation.
+## Root Cause (Updated)
+The issue was NOT missing Firestore rules deployment. The actual problem was in the `friendService.ts` implementation:
 
-## Solution
+The `sendFriendRequest` function used a batch write that attempted to update **both users' documents**:
+- Update sender's document (allowed)
+- Update recipient's document (DENIED - user cannot update another user's profile)
 
-### Step 1: Re-authenticate with Firebase
-Your Firebase CLI session has expired. Run:
+This violated the Firestore security rule: `allow update: if isOwner(userId) || isAdmin();`
 
-```bash
-firebase login --reauth
-```
+## Solution - Code Fix (Completed ✅)
 
-This will open a browser window for you to re-authenticate with Google.
+The fix involved removing user document updates from friend request operations. Instead of maintaining `friendRequestsSent` and `friendRequestsReceived` arrays in user documents, we query directly from the `friendRequests` collection.
 
-### Step 2: Verify Firebase Project
-Confirm you're deploying to the correct project:
+### Changes Made to `src/services/firebase/friendService.ts`:
 
-```bash
-firebase projects:list
-```
+1. **`sendFriendRequest`** - Simplified to only create the friend request document:
+   ```typescript
+   export const sendFriendRequest = async (fromUserId: string, toUserId: string) => {
+     const newRequestRef = doc(friendRequestsCollection);
+     await setDoc(newRequestRef, {
+       fromUserId,
+       toUserId,
+       status: 'pending',
+       createdAt: serverTimestamp(),
+     });
+   };
+   ```
 
-Should show `gymapp-85740` as the active project. If not, select it:
+2. **`acceptFriendRequest`** - Removed user document array updates:
+   - Only updates request status to 'accepted'
+   - Creates friendship document
+   - No longer updates user documents
 
-```bash
-firebase use gymapp-85740
-```
+3. **`denyFriendRequest`** - Simplified to only update request status
 
-### Step 3: Deploy Firestore Rules
-Once authenticated, deploy the security rules:
+4. **`cancelFriendRequest`** - Simplified to only delete request document
 
-```bash
-firebase deploy --only firestore:rules
-```
+5. **`removeFriend`** - Query and delete friendship document only
 
-You should see:
-```
-✔ Deploy complete!
-```
+6. **`getUserFriends`** - Now queries from `friendships` collection instead of reading from user document arrays
 
-### Step 4: Verify Deployment
-Check the Firebase Console:
-1. Go to https://console.firebase.google.com/
-2. Select your `gymapp-85740` project
-3. Navigate to **Firestore Database** → **Rules**
-4. Verify the rules show the latest version with timestamps
-
-### Step 5: Test Friend Requests
-After deployment:
-1. Login as a member (e.g., member1@gymapp.com)
+### Verification (Tested ✅)
+1. Login as member2@gymapp.com
 2. Navigate to Social page
-3. Search for another user's Friend ID (e.g., "User5678")
+3. Search for member1 by Friend ID "User8742"
 4. Click "Send Request"
-5. Should now succeed without permission error
+5. ✅ **Success!** Toast shows "Friend request sent to member1"
 
 ## Technical Details
 
