@@ -266,12 +266,16 @@ const getSessionRoster = async (sessionId: string): Promise<RosterItem[]> => {
 
   const userIds = [...new Set(bookings.map(b => b.userId))];
 
-  // Firestore 'in' query is limited to 10 items. For a larger roster, fetch users one by one.
-  // This is a PoC, so we assume rosters are small.
-  const usersQuery = query(collection(db, 'users'), where('id', 'in', userIds));
-  const userSnapshot = await getDocs(usersQuery);
-  const users = userSnapshot.docs.map(doc => doc.data() as UserProfile);
-  const userMap = new Map(users.map(u => [u.id, u]));
+  // Fetch user documents by document ID (parallel reads for performance)
+  const userPromises = userIds.map(userId => getDoc(doc(db, 'users', userId)));
+  const userDocs = await Promise.all(userPromises);
+
+  // Create map of userId -> UserProfile
+  const userMap = new Map(
+    userDocs
+      .filter(doc => doc.exists())
+      .map(doc => [doc.id, { id: doc.id, ...doc.data() } as UserProfile])
+  );
 
   return bookings.map(booking => {
     const user = userMap.get(booking.userId);
