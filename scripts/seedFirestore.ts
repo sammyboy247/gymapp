@@ -26,7 +26,7 @@ import { join } from 'path';
 dotenv.config();
 
 // Load service account key
-const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
+const serviceAccountPath = join(process.cwd(), 'gymapp-85740-firebase-adminsdk-fbsvc-eae62211c8.json');
 const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
 
 // Initialize Firebase Admin

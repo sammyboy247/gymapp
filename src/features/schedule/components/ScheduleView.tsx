@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { scheduleService } from '@/services/firebase/scheduleService';
 import { getFriendsWithActivitySharing } from '@/services/firebase/friendService';
 import type { Schedule, Booking, UserProfile } from '@/types';
@@ -25,15 +25,26 @@ export const ScheduleView: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribeSchedules = scheduleService.getSchedules(
-      filter.startDate,
-      filter.endDate,
-      (newSchedules) => {
-        setSchedules(newSchedules);
-        setLoading(false);
-      },
-      filter.sessionType === 'all' ? null : filter.sessionType
-    );
+    setBookingError(null); // Clear previous errors
+
+    let unsubscribeSchedules: () => void;
+
+    try {
+      unsubscribeSchedules = scheduleService.getSchedules(
+        filter.startDate,
+        filter.endDate,
+        (newSchedules) => {
+          setSchedules(newSchedules);
+          setLoading(false);
+        },
+        filter.sessionType === 'all' ? null : filter.sessionType
+      );
+    } catch (err) {
+      console.error('Failed to subscribe to schedules:', err);
+      setBookingError('Failed to load schedule. Please try refreshing the page.');
+      setLoading(false);
+      unsubscribeSchedules = () => { }; // No-op cleanup
+    }
 
     if (userId) {
       const unsubscribeBookings = scheduleService.getUserBookings(userId, setUserBookings);
@@ -86,9 +97,20 @@ export const ScheduleView: React.FC = () => {
     loadFriendActivity();
   }, [userId, schedules]);
 
-  const handleSessionClick = (session: Schedule) => {
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const handleSessionClick = (session: Schedule, e: React.MouseEvent<HTMLButtonElement>) => {
     if (session.spotsRemaining > 0 || isUserBooked(session.id)) {
+      triggerRef.current = e.currentTarget;
       setSelectedSession(session);
+    }
+  };
+
+  const handleModalClose = () => {
+    setSelectedSession(null);
+    // Return focus to the element that opened the modal
+    if (triggerRef.current) {
+      triggerRef.current.focus();
     }
   };
 
@@ -142,15 +164,14 @@ export const ScheduleView: React.FC = () => {
             <button
               type="button"
               key={session.id}
-              onClick={() => handleSessionClick(session)}
+              onClick={(e) => handleSessionClick(session, e)}
               disabled={session.spotsRemaining === 0 && !isUserBooked(session.id)}
-              className={`p-4 border rounded-lg transition-colors text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isUserBooked(session.id)
-                  ? 'bg-blue-100 border-blue-500'
-                  : session.spotsRemaining > 0
+              className={`p-4 border rounded-lg transition-colors text-left w-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${isUserBooked(session.id)
+                ? 'bg-blue-100 border-blue-500'
+                : session.spotsRemaining > 0
                   ? 'cursor-pointer hover:bg-zinc-100 border-gray-300'
                   : 'bg-zinc-200 text-zinc-500 border-gray-200 cursor-not-allowed'
-              }`}
+                }`}
               aria-label={`${isUserBooked(session.id) ? 'View booking for' : 'Book'} ${session.sessionType} on ${session.startTime.toDate().toLocaleDateString()} at ${session.startTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             >
               <h3 className="font-bold text-lg">{session.sessionType}</h3>
@@ -181,7 +202,7 @@ export const ScheduleView: React.FC = () => {
       {selectedSession && (
         <BookingModal
           session={selectedSession}
-          onClose={() => setSelectedSession(null)}
+          onClose={handleModalClose}
           userBookings={userBookings}
           setUserBookings={setUserBookings}
           setBookingError={setBookingError}

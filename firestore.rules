@@ -66,8 +66,8 @@ service cloud.firestore {
         isAdminOrCoach()
       );
 
-      // Users can create their own bookings
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Users can create their own bookings, admins/coaches can create for anyone
+      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || isAdminOrCoach();
 
       // Users can update/delete their own bookings, admins can do any
       allow update, delete: if isAuthenticated() && (
@@ -125,10 +125,10 @@ service cloud.firestore {
 
       // System creates friendships (via Cloud Functions ideally)
       // For now, users can create if they're one of the parties
-      allow create: if isAuthenticated() && (
+      allow create: if (isAuthenticated() && (
         request.resource.data.user1Id == request.auth.uid ||
         request.resource.data.user2Id == request.auth.uid
-      );
+      )) || isAdminOrCoach();
 
       // Users can update their own activity sharing preference
       allow update: if isAuthenticated() && (

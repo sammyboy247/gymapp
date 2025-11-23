@@ -20,7 +20,7 @@ import {
   setDoc,
   getDocs
 } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 // Firebase config from environment
 const firebaseConfig = {
@@ -186,6 +186,21 @@ async function main() {
   console.log('🌱 Starting seed data process...\n');
 
   try {
+    // Step 0: Authenticate as Admin to bypass rules
+    console.log('🔐 Authenticating...');
+    const adminUser = TEST_USERS[0];
+    try {
+      await createUserWithEmailAndPassword(auth, adminUser.email, adminUser.password);
+      console.log('   ✓ Created and signed in as admin');
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        await signInWithEmailAndPassword(auth, adminUser.email, adminUser.password);
+        console.log('   ✓ Signed in as existing admin');
+      } else {
+        throw error;
+      }
+    }
+
     // Check if data already exists
     const usersSnapshot = await getDocs(collection(db, 'users'));
     if (!usersSnapshot.empty) {
@@ -237,12 +252,36 @@ async function main() {
         console.log(`   ✓ Created ${userData.role}: ${userData.email}`);
       } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
-          console.log(`   ⚠️  Auth user ${userData.email} already exists (skipping auth, adding profile)`);
-          // Try to add Firestore profile anyway with generated ID
+          console.log(`   ⚠️  Auth user ${userData.email} already exists (checking profile)`);
+
+          // Check if Firestore profile exists
           const existingUsers = await getDocs(collection(db, 'users'));
           const existing = existingUsers.docs.find(doc => doc.data().email === userData.email);
+
           if (existing) {
+            console.log(`   ✓ Profile exists for ${userData.email}`);
             userIds[userData.email] = existing.id;
+          } else {
+            console.log(`   ⚠️  Profile missing for ${userData.email}, creating it...`);
+            // We need the UID. Since we can't get it from the error, we must sign in.
+            // Note: This changes the current auth user!
+            const credential = await signInWithEmailAndPassword(auth, userData.email, userData.password);
+            const userId = credential.user.uid;
+            userIds[userData.email] = userId;
+
+            await setDoc(doc(db, 'users', userId), {
+              email: userData.email,
+              displayName: userData.displayName,
+              role: userData.role,
+              friendId: userData.friendId,
+              shareActivity: true,
+              friends: [],
+              friendRequestsSent: [],
+              friendRequestsReceived: [],
+              createdAt: Timestamp.now(),
+              updatedAt: Timestamp.now()
+            });
+            console.log(`   ✓ Created missing profile for ${userData.role}: ${userData.email}`);
           }
         } else {
           console.error(`   ✗ Error creating ${userData.email}:`, error.message);
@@ -251,6 +290,21 @@ async function main() {
     }
 
     console.log(`\n✓ User creation complete (${Object.keys(userIds).length} users)\n`);
+
+    // Step 1.5: Re-authenticate as Admin to ensure permissions for creating content
+    console.log('🔐 Re-authenticating as Admin...');
+    const adminCred = await signInWithEmailAndPassword(auth, TEST_USERS[0].email, TEST_USERS[0].password);
+    console.log('   ✓ Signed in as admin');
+
+    // Force update admin profile to ensure role is correct
+    console.log('   ✓ Verifying admin privileges...');
+    await setDoc(doc(db, 'users', adminCred.user.uid), {
+      role: 'admin',
+      email: TEST_USERS[0].email,
+      displayName: TEST_USERS[0].displayName,
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+    console.log('   ✓ Admin profile verified/updated');
 
     // Step 2: Create programs
     console.log('📋 Creating training programs...');

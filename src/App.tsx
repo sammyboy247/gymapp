@@ -7,6 +7,7 @@ import { updateTestAccountRoles } from '@/utils/updateTestAccountRoles';
 import { testFirestore } from '@/utils/testFirestore';
 import { checkDatabase } from '@/utils/checkDatabase';
 import { checkUserRole } from '@/utils/checkUserRole';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 // --- Directly Import All Pages ---
 import LoginPage from '@/pages/LoginPage';
@@ -30,31 +31,37 @@ function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-4 focus:bg-white focus:text-blue-600"
+      >
+        Skip to main content
+      </a>
       <Toaster position="top-right" richColors closeButton />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
 
-          {/* Main App Routes (Protected) */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/social" element={<SocialPage />} />
-            </Route>
+        {/* Main App Routes (Protected) */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/social" element={<SocialPage />} />
           </Route>
+        </Route>
 
-          {/* Admin-Only Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
-            <Route element={<AppLayout />}>
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/gym-settings" element={<GymSettingsPage />} />
-            </Route>
+        {/* Admin-Only Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
+          <Route element={<AppLayout />}>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/gym-settings" element={<GymSettingsPage />} />
           </Route>
+        </Route>
 
-        </Routes>
-    </>
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

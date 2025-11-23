@@ -9,8 +9,6 @@ import {
   writeBatch,
   getDoc,
   runTransaction,
-  arrayUnion,
-  arrayRemove,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './config';
@@ -41,6 +39,38 @@ export const searchByFriendId = async (friendId: string): Promise<PublicUserData
 
 // Send a friend request
 export const sendFriendRequest = async (fromUserId: string, toUserId: string) => {
+  if (fromUserId === toUserId) {
+    throw new Error("You cannot send a friend request to yourself.");
+  }
+
+  // Check for existing pending request
+  const existingRequestQuery = query(
+    friendRequestsCollection,
+    where('fromUserId', '==', fromUserId),
+    where('toUserId', '==', toUserId),
+    where('status', '==', 'pending')
+  );
+  const existingRequestSnapshot = await getDocs(existingRequestQuery);
+  if (!existingRequestSnapshot.empty) {
+    throw new Error("Friend request already sent.");
+  }
+
+  // Check if already friends
+  const q1 = query(
+    friendshipsCollection,
+    where('user1Id', '==', fromUserId),
+    where('user2Id', '==', toUserId)
+  );
+  const q2 = query(
+    friendshipsCollection,
+    where('user1Id', '==', toUserId),
+    where('user2Id', '==', fromUserId)
+  );
+  const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+  if (!s1.empty || !s2.empty) {
+    throw new Error("You are already friends with this user.");
+  }
+
   // Simply create the friend request document
   // No need to update user arrays - we query from friendRequests collection
   const newRequestRef = doc(friendRequestsCollection);
@@ -73,14 +103,14 @@ export const acceptFriendRequest = async (requestId: string, fromUserId: string,
 };
 
 // Deny a friend request
-export const denyFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
+export const denyFriendRequest = async (requestId: string, _fromUserId: string, _toUserId: string) => {
   // Simply update the request status to denied
   const requestRef = doc(friendRequestsCollection, requestId);
   await setDoc(requestRef, { status: 'denied', respondedAt: serverTimestamp() }, { merge: true });
 };
 
 // Cancel a sent friend request
-export const cancelFriendRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
+export const cancelFriendRequest = async (requestId: string, _fromUserId: string, _toUserId: string) => {
   // Simply delete the friend request document
   const requestRef = doc(friendRequestsCollection, requestId);
   await deleteDoc(requestRef);
