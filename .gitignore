@@ -23,9 +23,36 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment variables (SECURITY CRITICAL)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
 # Gemini CLI temporary directories
 .dev-pipeline/.disregard/
 
-# Firebase service account keys (sensitive!)
+# Firebase service account keys (SECURITY CRITICAL - Never commit these!)
 serviceAccountKey.json
-*-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+gymapp-*-firebase-adminsdk-*.json
+
+# Firebase cache and local data
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Build artifacts
+*.tsbuildinfo
+.cache/
+
+# OS files
+Thumbs.db
