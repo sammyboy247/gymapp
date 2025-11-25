@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { lazy, Suspense } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthInit } from '@/hooks/useAuthInit';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
@@ -8,15 +9,16 @@ import { testFirestore } from '@/utils/testFirestore';
 import { checkDatabase } from '@/utils/checkDatabase';
 import { checkUserRole } from '@/utils/checkUserRole';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { PageLoadingSpinner } from '@/components/PageLoadingSpinner';
 
-// --- Directly Import All Pages ---
-import LoginPage from '@/pages/LoginPage';
-import HomePage from '@/pages/HomePage';
-import SchedulePage from '@/pages/SchedulePage';
-import ProfilePage from '@/pages/ProfilePage';
-import SocialPage from '@/pages/SocialPage';
-import AdminPage from '@/pages/AdminPage';
-import GymSettingsPage from '@/pages/GymSettingsPage';
+// --- Lazy Load All Pages for Code Splitting ---
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const SchedulePage = lazy(() => import('@/pages/SchedulePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const SocialPage = lazy(() => import('@/pages/SocialPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
+const GymSettingsPage = lazy(() => import('@/pages/GymSettingsPage'));
 
 function App() {
   // Initialize Firebase auth state listener
@@ -39,28 +41,30 @@ function App() {
         Skip to main content
       </a>
       <Toaster position="top-right" richColors closeButton />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Main App Routes (Protected) */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/schedule" element={<SchedulePage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/social" element={<SocialPage />} />
+          {/* Main App Routes (Protected) */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/social" element={<SocialPage />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Admin-Only Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
-          <Route element={<AppLayout />}>
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/gym-settings" element={<GymSettingsPage />} />
+          {/* Admin-Only Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'coach']} />}>
+            <Route element={<AppLayout />}>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/gym-settings" element={<GymSettingsPage />} />
+            </Route>
           </Route>
-        </Route>
 
-      </Routes>
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

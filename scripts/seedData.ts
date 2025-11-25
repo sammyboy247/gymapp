@@ -79,10 +79,18 @@ const SESSION_TYPES = [
 // Locations
 const LOCATIONS = ['Main Gym', 'Studio A', 'Studio B', 'Outdoor Area'];
 
-// Generate unique Friend ID
+// Generate unique Friend ID in User#### format
 function generateFriendId(role: string, index: number): string {
-  const prefix = role === 'admin' ? 'ADM' : role === 'coach' ? 'CCH' : 'MEM';
-  return `${prefix}${String(index).padStart(5, '0')}`;
+  // Number ranges: admins 0001-0099, coaches 0100-0199, members 1000-9999
+  let number: number;
+  if (role === 'admin') {
+    number = index; // 1-99
+  } else if (role === 'coach') {
+    number = 100 + index - 1; // 100-199
+  } else {
+    number = 1000 + index - 1; // 1000-9999
+  }
+  return `User${String(number).padStart(4, '0')}`;
 }
 
 // Generate test users
@@ -158,7 +166,7 @@ async function confirm(message: string): Promise<boolean> {
 async function clearData() {
   console.log('🗑️  Clearing existing data...');
 
-  const collections = ['users', 'schedules', 'programs', 'bookings', 'friendRequests', 'programAssignments'];
+  const collections = ['users', 'schedules', 'programs', 'bookings', 'friendRequests', 'programAssignments', 'classTypes'];
 
   for (const collectionName of collections) {
     const snapshot = await db.collection(collectionName).get();
@@ -227,6 +235,38 @@ async function seedUsers() {
   }
 
   return { userIds, totalUsers: users.length };
+}
+
+// Seed class types
+async function seedClassTypes() {
+  console.log('\n🎨 Seeding class types...');
+
+  const classTypes = [
+    { name: 'Strength Training', color: '#3B82F6', icon: '💪', active: true },
+    { name: 'HIIT', color: '#EF4444', icon: '⚡', active: true },
+    { name: 'Yoga', color: '#10B981', icon: '🧘', active: true },
+    { name: 'CrossFit', color: '#F59E0B', icon: '🤸', active: true },
+    { name: 'Spin Class', color: '#8B5CF6', icon: '🚴', active: true },
+    { name: 'Boxing', color: '#EC4899', icon: '🥊', active: true },
+    { name: 'Olympic Lifting', color: '#6366F1', icon: '🏋️', active: true },
+    { name: 'Mobility & Recovery', color: '#14B8A6', icon: '🎯', active: true },
+    { name: 'Cardio Blast', color: '#F97316', icon: '🏃', active: true },
+    { name: 'Functional Fitness', color: '#06B6D4', icon: '💪', active: true },
+  ];
+
+  const classTypeIds: string[] = [];
+
+  for (const classType of classTypes) {
+    const docRef = await db.collection('classTypes').add({
+      ...classType,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    classTypeIds.push(docRef.id);
+    console.log(`  ✅ Created: ${classType.name.padEnd(25)} | ${classType.icon} | ${classType.color}`);
+  }
+
+  return classTypeIds;
 }
 
 // Seed programs
@@ -507,6 +547,7 @@ async function main() {
   console.log('🚀 GymApp Enhanced Seed Data Script (TASK-056)\n');
   console.log('📊 This will create:');
   console.log('   • 30 users (2 admins, 3 coaches, 25 members)');
+  console.log('   • 10 class types (Strength, HIIT, Yoga, etc.)');
   console.log('   • 8 workout programs');
   console.log('   • 70 sessions over 2 weeks (5 per day)');
   console.log('   • ~35 realistic bookings');
@@ -547,6 +588,9 @@ async function main() {
       throw new Error('Failed to create all required users');
     }
 
+    // Seed class types
+    const classTypeIds = await seedClassTypes();
+
     // Seed programs
     const programIds = await seedPrograms(coachIds);
 
@@ -568,11 +612,12 @@ async function main() {
     console.log('   Coach:    coach3@gymapp.com / Coach123!');
     console.log('   Members:  member1-25@gymapp.com / Member123!\n');
     console.log('📊 Data Summary:');
-    console.log(`   Users:     ${totalUsers}`);
-    console.log(`   Programs:  ${programIds.length}`);
-    console.log(`   Sessions:  ${scheduleIds.length}`);
-    console.log(`   Bookings:  ~35`);
-    console.log(`   Friends:   10 connections + 5 pending requests\n`);
+    console.log(`   Users:       ${totalUsers}`);
+    console.log(`   Class Types: ${classTypeIds.length}`);
+    console.log(`   Programs:    ${programIds.length}`);
+    console.log(`   Sessions:    ${scheduleIds.length}`);
+    console.log(`   Bookings:    ~35`);
+    console.log(`   Friends:     10 connections + 5 pending requests\n`);
     console.log('🔗 Next steps:');
     console.log('   1. npm run dev');
     console.log('   2. Login with any test account above');
